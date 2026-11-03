@@ -328,7 +328,7 @@ untitled:"Untitled",pasteOne:"Paste at least one line.",nItems:"{n} segments in 
 colors:{white:"white",green:"green",yellow:"yellow",red:"red"},
 sample:[["Welcome","Example: Host",5],["Keynote","Example: Speaker",20],["Panel","Example: Guests",15],["Break","",10],["Q&A","Example: Everyone",10],["Closing","Example: Host",5]],
 sampleMsgs:[["2 minutes left","yellow"],["Please wrap up","red"],["Speak closer to the mic","white"]]}};
-const t=(k,vars)=>{let v=DICT[LANG][k];if(v==null)v=DICT.pt[k]??k;if(vars&&typeof v==="string")for(const n in vars)v=v.replace("{"+n+"}",vars[n]);return v};
+const tx=(k,vars)=>{let v=DICT[LANG][k];if(v==null)v=DICT.pt[k]??k;if(vars&&typeof v==="string")for(const n in vars)v=v.replace("{"+n+"}",vars[n]);return v};
 const SLUG_EN={controle:"control",palco:"stage",agenda:"agenda",moderador:"moderator",registro:"log",perguntas:"questions",conectar:"connect"};
 const slug=v=>LANG==="en"?SLUG_EN[v]||v:v;
 function setLang(l){lsSet("rst-lang",l);const h=location.hash.replace("#",""),v=VIEWS.find(x=>x===h||SLUG_EN[x]===h);
@@ -340,9 +340,9 @@ const COLORS={white:"#f4f4f4",green:"#3ddc84",yellow:"#f5b700",red:"#ff3b30"};
 let OFFSET=0;const T=()=>Date.now()+OFFSET;
 
 function defaultState(){return{
-  show:t("defaultShow"),items:[],messages:[],activeId:null,running:false,kickoff:0,elapsedBefore:0,extraMs:0,
+  show:tx("defaultShow"),items:[],messages:[],activeId:null,running:false,kickoff:0,elapsedBefore:0,extraMs:0,
   runStartedAt:0,pausedMs:0,pauseStartedAt:0,shownMsgId:null,flashAt:0,blackout:false,firedOn:{},h24:true}}
-function defaultItem(p){return Object.assign({id:uid(),title:t("newItem"),speaker:"",notes:"",dur:600,mode:"down",trigger:"manual",at:"",wrapY:60,wrapR:15,chime:true},p||{})}
+function defaultItem(p){return Object.assign({id:uid(),title:tx("newItem"),speaker:"",notes:"",dur:600,mode:"down",trigger:"manual",at:"",wrapY:60,wrapR:15,chime:true},p||{})}
 
 let S=defaultState(),LOGS={},QS=[];
 let mode="loading",canWrite=false,peers=0,queued=null,sb=null,chan=null,ctlSeen=false;
@@ -374,7 +374,7 @@ function live(now){
   if(S.runStartedAt||S.running){ if(remaining<=0)phase="over"; else if(remaining<=it.wrapR*1000)phase="red"; else if(remaining<=it.wrapY*1000)phase="yellow"; }
   const progress=total>0?Math.min(1,elapsed/total):1;
   let main,sub="";
-  if(it.mode==="up"){main=fmtMs(elapsed,true);sub=t("of")+" "+fmtDur(total/1000)}
+  if(it.mode==="up"){main=fmtMs(elapsed,true);sub=tx("of")+" "+fmtDur(total/1000)}
   else if(it.mode==="tod"){main=clock(now,false);sub=fmtMs(remaining)}
   else if(it.mode==="down+tod"){main=fmtMs(remaining);sub=clock(now,false)}
   else main=fmtMs(remaining);
@@ -387,19 +387,19 @@ function ping(){if(chan)chan.send({type:"broadcast",event:"changed",payload:{at:
 // tenta de novo até a internet voltar, na mesma ordem; nada que você fez se perde enquanto a página estiver aberta
 function send(fn,args){outstanding++;
   const attempt=()=>rpc(fn,args).then(()=>{warned=false;if(mode!=="net"){mode="net";renderAll()}ping()}).catch(e=>{
-    if(e.code==="42501"){canWrite=false;toast(t("noKey"));renderAll();return}
-    if(!warned){warned=true;toast(t("offlineQueued"))}
+    if(e.code==="42501"){canWrite=false;toast(tx("noKey"));renderAll();return}
+    if(!warned){warned=true;toast(tx("offlineQueued"))}
     if(mode!=="off"){mode="off";renderAll()}return new Promise(r=>setTimeout(r,2500)).then(attempt)});
   return attempt().finally(()=>{outstanding--;if(!outstanding&&queued){const m=queued;queued=null;apply(m)}})}
 function save(){const snap=JSON.parse(JSON.stringify(S));writeChain=writeChain.then(()=>send("save_state",{p_id:SID,p_key:KEY,p_state:snap}));
   rememberSession();renderAll()}
 function saveLog(id,log){LOGS[id]=log;writeChain=writeChain.then(()=>send("save_log",{p_id:SID,p_key:KEY,p_log_id:id,p_log:log}))}
 function dropLog(id){delete LOGS[id];writeChain=writeChain.then(()=>send("save_log",{p_id:SID,p_key:KEY,p_log_id:id,p_log:null}))}
-function onWriteErr(){toast(t("saveFail"))}
+function onWriteErr(){toast(tx("saveFail"))}
 function rememberSession(){if(!SID||!KEY)return;const all=lsGet("ah-sessions",{});all[SID]={show:S.show,at:Date.now()};lsSet("ah-sessions",all)}
 
 /* ---------- ações ---------- */
-function guard(){if(!canWrite){toast(t("readOnly"));return false}return true}
+function guard(){if(!canWrite){toast(tx("readOnly"));return false}return true}
 function finishCurrent(now){
   const it=item(S.activeId);
   if(it&&S.runStartedAt){
@@ -463,17 +463,17 @@ function automate(now,L){
 /* ---------- render ---------- */
 function currentView(){const h=location.hash.replace("#","");return VIEWS.find(v=>v===h||SLUG_EN[v]===h)||(canWrite?"controle":"agenda")}
 function tabs(){
-  const labels={controle:t("tabControl"),palco:t("tabStage"),agenda:t("tabAgenda"),moderador:t("tabModerator"),registro:t("tabLog"),perguntas:t("tabQuestions"),conectar:t("tabConnect")};
-  return `<nav class="tabs" aria-label="${t("screens")}">${VIEWS.filter(v=>canWrite||!["controle","moderador","registro"].includes(v)||v===view).map(v=>`<a href="#${slug(v)}" ${v===view?'aria-current="page"':""}>${labels[v]}</a>`).join("")}</nav>`}
+  const labels={controle:tx("tabControl"),palco:tx("tabStage"),agenda:tx("tabAgenda"),moderador:tx("tabModerator"),registro:tx("tabLog"),perguntas:tx("tabQuestions"),conectar:tx("tabConnect")};
+  return `<nav class="tabs" aria-label="${tx("screens")}">${VIEWS.filter(v=>canWrite||!["controle","moderador","registro"].includes(v)||v===view).map(v=>`<a href="#${slug(v)}" ${v===view?'aria-current="page"':""}>${labels[v]}</a>`).join("")}</nav>`}
 function syncPill(){
-  const ro=canWrite?"":" · "+t("readOnlyShort");
-  if(mode==="net")return `<span class="pill live" title="${t("sameState")}">${t("session")} <span class="code">${SID}</span> · ${peers} ${t(peers===1?"connected1":"connectedN")}${ro}</span>`;
-  if(mode==="off")return `<span class="pill local" title="${t("offlineTitle")}">${t("offline")}</span>`;
-  if(mode==="missing")return `<span class="pill local">${t("notFound")}</span>`;
-  return `<span class="pill">${t("connecting")}</span>`}
+  const ro=canWrite?"":" · "+tx("readOnlyShort");
+  if(mode==="net")return `<span class="pill live" title="${tx("sameState")}">${tx("session")} <span class="code">${SID}</span> · ${peers} ${tx(peers===1?"connected1":"connectedN")}${ro}</span>`;
+  if(mode==="off")return `<span class="pill local" title="${tx("offlineTitle")}">${tx("offline")}</span>`;
+  if(mode==="missing")return `<span class="pill local">${tx("notFound")}</span>`;
+  return `<span class="pill">${tx("connecting")}</span>`}
 function header(){
   return `<header class="top"><div class="brand"><a href="${BASE}" style="text-decoration:none"><small>Remote Stage Timer</small></a>
-    <input id="showName" class="f" aria-label="${t("eventName")}" value="${esc(S.show)}" ${canWrite?"":"readonly"}></div>
+    <input id="showName" class="f" aria-label="${tx("eventName")}" value="${esc(S.show)}" ${canWrite?"":"readonly"}></div>
     ${tabs()}<div class="meta"><span id="hdrClock">${clock(T(),true)}</span>${syncPill()}${langBtn()}</div></header>`}
 
 function renderAll(){
@@ -481,10 +481,10 @@ function renderAll(){
   pendingRender=false;
   view=currentView();
   const app=$("#app");
-  if(!CFG.supabaseUrl){app.innerHTML=`<div class="wrap"><div class="home"><h1>Remote Stage Timer</h1><p class="warn">${t("noConfig")}</p></div></div>`;return}
+  if(!CFG.supabaseUrl){app.innerHTML=`<div class="wrap"><div class="home"><h1>Remote Stage Timer</h1><p class="warn">${tx("noConfig")}</p></div></div>`;return}
   if(!SID){document.body.classList.remove("stage-mode");app.innerHTML=`<div class="wrap">${homeHTML()}</div>`;bindHome();return}
-  if(mode==="missing"){document.body.classList.remove("stage-mode");app.innerHTML=`<div class="wrap"><div class="home"><h1>${t("missingTitle",{id:esc(SID)})}</h1>
-    <p class="lead">${t("missingLead")}</p><div><a class="btn primary" href="${BASE}">${t("backHome")}</a></div></div></div>`;return}
+  if(mode==="missing"){document.body.classList.remove("stage-mode");app.innerHTML=`<div class="wrap"><div class="home"><h1>${tx("missingTitle",{id:esc(SID)})}</h1>
+    <p class="lead">${tx("missingLead")}</p><div><a class="btn primary" href="${BASE}">${tx("backHome")}</a></div></div></div>`;return}
   document.body.classList.toggle("stage-mode",view==="palco");
   if(view==="palco"){app.innerHTML=stageHTML();bindStage();tick();return}
   let body="";
@@ -498,7 +498,7 @@ function renderAll(){
   bind();tick()}
 function isEditing(){const a=document.activeElement;return a&&a.matches&&a.matches("#app input,#app textarea,#app select")&&a.dataset.live!=="1"}
 
-function langBtn(){return `<button class="btn sm langbtn" data-lang aria-label="${t("switchLang")}" title="${t("switchLang")}">${t("otherLang")}</button>`}
+function langBtn(){return `<button class="btn sm langbtn" data-lang aria-label="${tx("switchLang")}" title="${tx("switchLang")}">${tx("otherLang")}</button>`}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-lang]");if(b)setLang(LANG==="pt"?"en":"pt")});
 function monitorHTML(){
   return `<div class="monitor"><div class="lbl"><span id="mnState">—</span><span id="mnSub"></span></div>
@@ -506,83 +506,83 @@ function monitorHTML(){
     <div class="msgprev" id="mnMsg"></div></div>`}
 function controlHTML(full){
   const d=!canWrite?"disabled":"";
-  const live=`<section class="card a-live"><h2>${t("onAir")}</h2>${monitorHTML()}
+  const live=`<section class="card a-live"><h2>${tx("onAir")}</h2>${monitorHTML()}
     <div class="ctrls">
-      <button class="btn primary" data-a="toggle" id="btnToggle" ${d}>${t("start")}</button>
-      <button class="btn" data-a="prev" ${d}>${t("prev")}</button>
-      <button class="btn" data-a="next" ${d}>${t("next")}</button>
-      <button class="btn" data-a="finish" ${d}>${t("finish")}</button>
+      <button class="btn primary" data-a="toggle" id="btnToggle" ${d}>${tx("start")}</button>
+      <button class="btn" data-a="prev" ${d}>${tx("prev")}</button>
+      <button class="btn" data-a="next" ${d}>${tx("next")}</button>
+      <button class="btn" data-a="finish" ${d}>${tx("finish")}</button>
       <button class="btn" data-a="minus" ${d}>−1 min</button>
       <button class="btn" data-a="plus" ${d}>+1 min</button>
-      <button class="btn" data-a="reset" ${d}>${t("reset")}</button>
-      <button class="btn ${S.blackout?"on":""}" data-a="blackout" ${d}>${t("blackout")}</button>
+      <button class="btn" data-a="reset" ${d}>${tx("reset")}</button>
+      <button class="btn ${S.blackout?"on":""}" data-a="blackout" ${d}>${tx("blackout")}</button>
     </div>
-    <p class="note">${t("keys")}</p>
-    <div class="row extra" style="margin-top:10px"><button class="btn sm ${soundOn?"on":""}" data-a="sound">${soundOn?t("soundOn"):t("soundOff")}</button>
-    <a class="btn sm" href="#${slug("conectar")}">${t("connectPhone")}</a><a class="btn sm" href="#${slug("palco")}">${t("openStage")}</a><a class="btn sm" href="#${slug("registro")}">${t("seeLog")}</a></div></section>`;
+    <p class="note">${tx("keys")}</p>
+    <div class="row extra" style="margin-top:10px"><button class="btn sm ${soundOn?"on":""}" data-a="sound">${soundOn?tx("soundOn"):tx("soundOff")}</button>
+    <a class="btn sm" href="#${slug("conectar")}">${tx("connectPhone")}</a><a class="btn sm" href="#${slug("palco")}">${tx("openStage")}</a><a class="btn sm" href="#${slug("registro")}">${tx("seeLog")}</a></div></section>`;
   return `<div class="ctl ${full?"":"mod"}">${live}${full?rundownHTML(d):""}${messagesHTML(d)}${questionsHTML(d)}</div>`}
 
 function itemStatus(it){
   const lg=LOGS[it.id];
-  if(S.activeId===it.id&&S.runStartedAt)return `<span class="tag live">${S.running?t("stOnAir"):t("stPaused")}</span>`;
-  if(S.activeId===it.id)return `<span class="tag live">${t("stCued")}</span>`;
-  if(lg){const delta=lg.elapsedMs-lg.plannedMs;return `<span class="tag done">${t("doneIn")} ${fmtDur(lg.elapsedMs/1000)}</span><span class="tag ${delta>0?"late":"done"}">${fmtDelta(delta)}</span>`}
+  if(S.activeId===it.id&&S.runStartedAt)return `<span class="tag live">${S.running?tx("stOnAir"):tx("stPaused")}</span>`;
+  if(S.activeId===it.id)return `<span class="tag live">${tx("stCued")}</span>`;
+  if(lg){const delta=lg.elapsedMs-lg.plannedMs;return `<span class="tag done">${tx("doneIn")} ${fmtDur(lg.elapsedMs/1000)}</span><span class="tag ${delta>0?"late":"done"}">${fmtDelta(delta)}</span>`}
   return ""}
-const MODE_L={down:t("mDown"),up:t("mUp"),tod:t("mTod"),"down+tod":t("mDownTod")};
-const TRIG_L={manual:t("tManual"),linked:t("tLinked"),scheduled:t("tScheduled")};
+const MODE_L={down:tx("mDown"),up:tx("mUp"),tod:tx("mTod"),"down+tod":tx("mDownTod")};
+const TRIG_L={manual:tx("tManual"),linked:tx("tLinked"),scheduled:tx("tScheduled")};
 function rundownHTML(d){
   const total=S.items.reduce((a,i)=>a+i.dur,0);
   const rows=S.items.map((it,k)=>`<div class="it ${S.activeId===it.id?"active":""}" data-id="${it.id}">
-    <div class="n" data-pre="${t("numPre")}">${k+1}</div>
-    <div class="fields"><input class="f" data-f="title" aria-label="${t("title")}" value="${esc(it.title)}" ${d}>
-      <input class="f spk" data-f="speaker" aria-label="${t("speaker")}" placeholder="${t("speaker")}" value="${esc(it.speaker)}" ${d}>
-      <input class="f dur" data-f="dur" aria-label="${t("duration")}" value="${fmtDur(it.dur)}" ${d}></div>
-    <div class="acts"><button class="btn sm primary" data-a="play" ${d} title="${t("startThis")}">${S.activeId===it.id&&S.running?t("onAir"):t("start")}</button>
-      <button class="btn sm ghost" data-a="up" ${d} aria-label="${t("moveUp")}">↑</button><button class="btn sm ghost" data-a="down" ${d} aria-label="${t("moveDown")}">↓</button></div>
-    <div class="status">${itemStatus(it)}<span>${MODE_L[it.mode]}</span><span>${TRIG_L[it.trigger]}${it.trigger==="scheduled"&&it.at?" "+t("at")+" "+esc(it.at):""}</span>${it.notes?`<span>${esc(it.notes)}</span>`:""}</div>
-    <details class="cfg"><summary>${t("settings")}</summary><div class="cfggrid">
-      <label>${t("type")}<select class="f" data-f="mode" ${d}>${Object.entries(MODE_L).map(([k,v])=>`<option value="${k}" ${it.mode===k?"selected":""}>${v}</option>`).join("")}</select></label>
-      <label>${t("trigger")}<select class="f" data-f="trigger" ${d}>${Object.entries(TRIG_L).map(([k,v])=>`<option value="${k}" ${it.trigger===k?"selected":""}>${v}</option>`).join("")}</select></label>
-      <label>${t("schedAt")}<input class="f" type="time" data-f="at" value="${esc(it.at)}" ${d}></label>
-      <label>${t("yellowAt")}<input class="f" type="number" min="0" data-f="wrapY" value="${it.wrapY}" ${d}></label>
-      <label>${t("redAt")}<input class="f" type="number" min="0" data-f="wrapR" value="${it.wrapR}" ${d}></label>
-      <label>${t("notes")}<input class="f" data-f="notes" value="${esc(it.notes)}" ${d}></label>
-      <label>&nbsp;<button class="btn sm" data-a="cue" ${d}>${t("cue")}</button></label>
-      <label>&nbsp;<button class="btn sm" data-a="del" ${d}>${t("remove")}</button></label>
+    <div class="n" data-pre="${tx("numPre")}">${k+1}</div>
+    <div class="fields"><input class="f" data-f="title" aria-label="${tx("title")}" value="${esc(it.title)}" ${d}>
+      <input class="f spk" data-f="speaker" aria-label="${tx("speaker")}" placeholder="${tx("speaker")}" value="${esc(it.speaker)}" ${d}>
+      <input class="f dur" data-f="dur" aria-label="${tx("duration")}" value="${fmtDur(it.dur)}" ${d}></div>
+    <div class="acts"><button class="btn sm primary" data-a="play" ${d} title="${tx("startThis")}">${S.activeId===it.id&&S.running?tx("onAir"):tx("start")}</button>
+      <button class="btn sm ghost" data-a="up" ${d} aria-label="${tx("moveUp")}">↑</button><button class="btn sm ghost" data-a="down" ${d} aria-label="${tx("moveDown")}">↓</button></div>
+    <div class="status">${itemStatus(it)}<span>${MODE_L[it.mode]}</span><span>${TRIG_L[it.trigger]}${it.trigger==="scheduled"&&it.at?" "+tx("at")+" "+esc(it.at):""}</span>${it.notes?`<span>${esc(it.notes)}</span>`:""}</div>
+    <details class="cfg"><summary>${tx("settings")}</summary><div class="cfggrid">
+      <label>${tx("type")}<select class="f" data-f="mode" ${d}>${Object.entries(MODE_L).map(([k,v])=>`<option value="${k}" ${it.mode===k?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label>${tx("trigger")}<select class="f" data-f="trigger" ${d}>${Object.entries(TRIG_L).map(([k,v])=>`<option value="${k}" ${it.trigger===k?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label>${tx("schedAt")}<input class="f" type="time" data-f="at" value="${esc(it.at)}" ${d}></label>
+      <label>${tx("yellowAt")}<input class="f" type="number" min="0" data-f="wrapY" value="${it.wrapY}" ${d}></label>
+      <label>${tx("redAt")}<input class="f" type="number" min="0" data-f="wrapR" value="${it.wrapR}" ${d}></label>
+      <label>${tx("notes")}<input class="f" data-f="notes" value="${esc(it.notes)}" ${d}></label>
+      <label>&nbsp;<button class="btn sm" data-a="cue" ${d}>${tx("cue")}</button></label>
+      <label>&nbsp;<button class="btn sm" data-a="del" ${d}>${tx("remove")}</button></label>
     </div></details></div>`).join("");
-  const empty=`<div class="empty"><p>${t("emptyRundown")}</p>
-    <button class="btn" data-a="sample" ${d}>${t("loadSample")}</button></div>`;
-  return `<section class="card a-run"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">${t("rundown")} · ${S.items.length} ${t("items")} · ${fmtDur(total)}</h2>
-    <button class="btn primary sm" data-a="add" ${d}>${t("addItem")}</button></div>
+  const empty=`<div class="empty"><p>${tx("emptyRundown")}</p>
+    <button class="btn" data-a="sample" ${d}>${tx("loadSample")}</button></div>`;
+  return `<section class="card a-run"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">${tx("rundown")} · ${S.items.length} ${tx("items")} · ${fmtDur(total)}</h2>
+    <button class="btn primary sm" data-a="add" ${d}>${tx("addItem")}</button></div>
     <div class="rd">${S.items.length?rows:empty}</div>
-    <details style="margin-top:12px"><summary class="note" style="cursor:pointer">${t("importCsv")}</summary>
-      <p class="note">${t("csvHelp")}</p>
-      <textarea class="f" id="csvIn" rows="4" placeholder="${esc(t("csvPh")).replace(/\n/g,"&#10;")}"></textarea>
-      <div class="row" style="margin-top:6px"><button class="btn sm" data-a="import" ${d}>${t("addToRundown")}</button><button class="btn sm" data-a="importReplace" ${d}>${t("replaceRundown")}</button></div>
+    <details style="margin-top:12px"><summary class="note" style="cursor:pointer">${tx("importCsv")}</summary>
+      <p class="note">${tx("csvHelp")}</p>
+      <textarea class="f" id="csvIn" rows="4" placeholder="${esc(tx("csvPh")).replace(/\n/g,"&#10;")}"></textarea>
+      <div class="row" style="margin-top:6px"><button class="btn sm" data-a="import" ${d}>${tx("addToRundown")}</button><button class="btn sm" data-a="importReplace" ${d}>${tx("replaceRundown")}</button></div>
     </details></section>`}
 
 function messagesHTML(d){
   const rows=S.messages.map(m=>`<div class="msg ${S.shownMsgId===m.id?"shown":""}" data-mid="${m.id}">
-    <input class="f" data-m="text" aria-label="${t("msgText")}" value="${esc(m.text)}" ${d}>
-    <div class="row">${Object.keys(COLORS).map(c=>`<button class="swatch ${m.color===c?"sel":""}" style="background:${COLORS[c]}" data-a="mcolor" data-c="${c}" aria-label="${t("color")} ${t("colors")[c]}" ${d}></button>`).join("")}
-      <button class="btn sm ${S.shownMsgId===m.id?"on":""}" data-a="mshow" ${d}>${S.shownMsgId===m.id?t("hide"):t("show")}</button>
-      <button class="btn sm ghost" data-a="mdel" ${d} aria-label="${t("delMsg")}">×</button></div></div>`).join("");
-  return `<section class="card a-msg"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">${t("messages")}</h2>
-    <div class="row"><button class="btn sm" data-a="flash" ${d}>${t("flash")}</button><button class="btn sm primary" data-a="madd" ${d}>${t("newMsg")}</button></div></div>
-    <div class="msgs">${rows||`<div class="empty"><p>${esc(t("emptyMsgs"))}</p></div>`}</div></section>`}
+    <input class="f" data-m="text" aria-label="${tx("msgText")}" value="${esc(m.text)}" ${d}>
+    <div class="row">${Object.keys(COLORS).map(c=>`<button class="swatch ${m.color===c?"sel":""}" style="background:${COLORS[c]}" data-a="mcolor" data-c="${c}" aria-label="${tx("color")} ${tx("colors")[c]}" ${d}></button>`).join("")}
+      <button class="btn sm ${S.shownMsgId===m.id?"on":""}" data-a="mshow" ${d}>${S.shownMsgId===m.id?tx("hide"):tx("show")}</button>
+      <button class="btn sm ghost" data-a="mdel" ${d} aria-label="${tx("delMsg")}">×</button></div></div>`).join("");
+  return `<section class="card a-msg"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">${tx("messages")}</h2>
+    <div class="row"><button class="btn sm" data-a="flash" ${d}>${tx("flash")}</button><button class="btn sm primary" data-a="madd" ${d}>${tx("newMsg")}</button></div></div>
+    <div class="msgs">${rows||`<div class="empty"><p>${esc(tx("emptyMsgs"))}</p></div>`}</div></section>`}
 
 function questionsHTML(d){
-  if(mode!=="net"&&!QS.length)return `<section class="card a-q"><h2>${t("questions")}</h2><p class="note">${t("connecting")}</p></section>`;
-  const rows=QS.map(q=>`<div class="q" data-qid="${q.id}"><div>${esc(q.text)}</div><small>${esc(q.name||t("anon"))} · ${clock(q.at,false)}</small>
-    <div class="row"><button class="btn sm" data-a="qmsg" ${d}>${t("toMessage")}</button><button class="btn sm ghost" data-a="qdel" ${d}>${t("dismiss")}</button></div></div>`).join("");
-  return `<section class="card a-q"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">${t("questions")} · ${QS.length}</h2><a class="btn sm" href="#${slug("conectar")}">${t("questionsQr")}</a></div>
-    <div class="stack" style="gap:10px">${rows||`<p class="note" style="margin:0">${t("emptyQs")}</p>`}</div></section>`}
+  if(mode!=="net"&&!QS.length)return `<section class="card a-q"><h2>${tx("questions")}</h2><p class="note">${tx("connecting")}</p></section>`;
+  const rows=QS.map(q=>`<div class="q" data-qid="${q.id}"><div>${esc(q.text)}</div><small>${esc(q.name||tx("anon"))} · ${clock(q.at,false)}</small>
+    <div class="row"><button class="btn sm" data-a="qmsg" ${d}>${tx("toMessage")}</button><button class="btn sm ghost" data-a="qdel" ${d}>${tx("dismiss")}</button></div></div>`).join("");
+  return `<section class="card a-q"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">${tx("questions")} · ${QS.length}</h2><a class="btn sm" href="#${slug("conectar")}">${tx("questionsQr")}</a></div>
+    <div class="stack" style="gap:10px">${rows||`<p class="note" style="margin:0">${tx("emptyQs")}</p>`}</div></section>`}
 
 function stageHTML(){
   return `<div id="stage"><div class="stage-head"><div><div class="stage-title" id="stTitle"></div><div class="stage-spk" id="stSpk"></div></div><div class="stage-clock" id="stClock"></div></div>
     <div class="stage-body"><div class="stage-time" id="stTime">0:00</div><div class="stage-sub" id="stSub"></div><div class="stage-msg" id="stMsg" hidden></div></div>
     <div class="stage-foot"><div class="bar"><i id="stBar"></i></div><div class="stage-next"><span id="stNext"></span><span id="stShow"></span></div></div>
-    <div class="stage-tools"><button id="stFull">${t("fullscreen")}</button><button id="stSound">${soundOn?t("soundOnShort"):t("soundOffShort")}</button><button data-lang>${t("otherLang")}</button>${canWrite?`<button onclick="location.hash='${slug("conectar")}'">${t("connectPhone")}</button><button onclick="location.hash='${slug("controle")}'">${t("control")}</button>`:""}</div></div>`}
+    <div class="stage-tools"><button id="stFull">${tx("fullscreen")}</button><button id="stSound">${soundOn?tx("soundOnShort"):tx("soundOffShort")}</button><button data-lang>${tx("otherLang")}</button>${canWrite?`<button onclick="location.hash='${slug("conectar")}'">${tx("connectPhone")}</button><button onclick="location.hash='${slug("controle")}'">${tx("control")}</button>`:""}</div></div>`}
 
 function agendaHTML(){
   let t=null;const rows=S.items.map((it,k)=>{
@@ -593,9 +593,9 @@ function agendaHTML(){
     else{const sch=it.trigger==="scheduled"?atToday(it.at):null;when=sch||(t??null);if(when!=null)t=when+it.dur*1000}
     const st=isNow?"now":lg?"past":"";
     return `<div class="ag-row ${st}"><span class="t">${when?clock(when,false):"—"}</span><div><div class="tt">${esc(it.title)}</div><div class="sp">${esc(it.speaker)}</div></div>
-      <span class="t">${isNow?`<b>${t("now")}</b>`:lg?fmtDur(lg.elapsedMs/1000):fmtDur(it.dur)}</span></div>`}).join("");
-  return `<section class="card"><h2>${t("agenda")} · ${esc(S.show)}</h2><div class="ag">${rows||`<div class="empty"><p>${t("emptyAgenda")}</p></div>`}</div>
-    <p class="note">${t("agendaNote")}</p></section>`}
+      <span class="t">${isNow?`<b>${tx("now")}</b>`:lg?fmtDur(lg.elapsedMs/1000):fmtDur(it.dur)}</span></div>`}).join("");
+  return `<section class="card"><h2>${tx("agenda")} · ${esc(S.show)}</h2><div class="ag">${rows||`<div class="empty"><p>${tx("emptyAgenda")}</p></div>`}</div>
+    <p class="note">${tx("agendaNote")}</p></section>`}
 
 function logRows(){
   const order=S.items.map(i=>i.id);
@@ -608,66 +608,66 @@ function logHTML(){
   const first=rows.length?Math.min(...rows.map(r=>r.startedAt)):null,last=rows.length?Math.max(...rows.map(r=>r.endedAt)):null;
   const tr=rows.map(r=>{const dl=r.elapsedMs-r.plannedMs;return `<tr><td>${esc(r.title)}</td><td>${esc(r.speaker)}</td><td class="num">${fmtDur(r.plannedMs/1000)}</td><td class="num">${fmtDur(r.elapsedMs/1000)}</td>
     <td class="num ${dl>0?"plus":"minus"}">${fmtDelta(dl)}</td><td class="num">${clock(r.startedAt,true)}</td><td class="num">${clock(r.endedAt,true)}</td><td class="num">${r.pausedMs>999?fmtDur(r.pausedMs/1000):"—"}</td>
-    <td>${canWrite?`<button class="btn sm ghost" data-a="ldel" data-lid="${esc(r.itemId)}">${t("del")}</button>`:""}</td></tr>`}).join("");
-  const liveRow=L&&L.started?`<tr><td>${esc(L.it.title)} <span class="tag live">${t("stOnAir")}</span></td><td>${esc(L.it.speaker)}</td><td class="num">${fmtDur(L.total/1000)}</td><td class="num" id="lgLive">${fmtDur(L.elapsed/1000)}</td><td></td><td class="num">${clock(S.runStartedAt,true)}</td><td></td><td></td><td></td></tr>`:"";
+    <td>${canWrite?`<button class="btn sm ghost" data-a="ldel" data-lid="${esc(r.itemId)}">${tx("del")}</button>`:""}</td></tr>`}).join("");
+  const liveRow=L&&L.started?`<tr><td>${esc(L.it.title)} <span class="tag live">${tx("stOnAir")}</span></td><td>${esc(L.it.speaker)}</td><td class="num">${fmtDur(L.total/1000)}</td><td class="num" id="lgLive">${fmtDur(L.elapsed/1000)}</td><td></td><td class="num">${clock(S.runStartedAt,true)}</td><td></td><td></td><td></td></tr>`:"";
   const dl=actual-planned;
-  return `<section class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">${t("log")}</h2>
-      <div class="row"><button class="btn sm" data-a="csvCopy">${t("copyCsv")}</button><button class="btn sm" data-a="csvSave">${t("saveCsv")}</button>
-      ${canWrite&&rows.length?`<button class="btn sm ghost" data-a="lclear" id="lclear">${t("clearLog")}</button>`:""}</div></div>
-    <div class="kpis"><div class="kpi"><b>${rows.length}/${S.items.length}</b><span>${t("kDone")}</span></div>
-      <div class="kpi"><b>${fmtDur(actual/1000)}</b><span>${t("kActual",{p:fmtDur(planned/1000)})}</span></div>
-      <div class="kpi"><b style="color:${dl>0?"var(--bad)":"var(--ok)"}">${fmtDelta(dl)}</b><span>${t("kDelta")}</span></div>
-      <div class="kpi"><b>${late}</b><span>${t("kLate")}</span></div>
-      <div class="kpi"><b>${first?clock(first,false)+"–"+clock(last,false):"—"}</b><span>${t("kSpan")}</span></div></div>
-    <div class="tbl"><table><thead><tr><th>${t("hItem")}</th><th>${t("hWho")}</th><th class="num">${t("hPlanned")}</th><th class="num">${t("hActual")}</th><th class="num">${t("hDelta")}</th><th class="num">${t("hStart")}</th><th class="num">${t("hEnd")}</th><th class="num">${t("hPauses")}</th><th></th></tr></thead>
-      <tbody>${tr}${liveRow}${!tr&&!liveRow?`<tr><td colspan="9" style="color:var(--muted)">${t("emptyLog")}</td></tr>`:""}</tbody></table></div>
-    <p class="note">${t("logNote")}</p></section>`}
+  return `<section class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">${tx("log")}</h2>
+      <div class="row"><button class="btn sm" data-a="csvCopy">${tx("copyCsv")}</button><button class="btn sm" data-a="csvSave">${tx("saveCsv")}</button>
+      ${canWrite&&rows.length?`<button class="btn sm ghost" data-a="lclear" id="lclear">${tx("clearLog")}</button>`:""}</div></div>
+    <div class="kpis"><div class="kpi"><b>${rows.length}/${S.items.length}</b><span>${tx("kDone")}</span></div>
+      <div class="kpi"><b>${fmtDur(actual/1000)}</b><span>${tx("kActual",{p:fmtDur(planned/1000)})}</span></div>
+      <div class="kpi"><b style="color:${dl>0?"var(--bad)":"var(--ok)"}">${fmtDelta(dl)}</b><span>${tx("kDelta")}</span></div>
+      <div class="kpi"><b>${late}</b><span>${tx("kLate")}</span></div>
+      <div class="kpi"><b>${first?clock(first,false)+"–"+clock(last,false):"—"}</b><span>${tx("kSpan")}</span></div></div>
+    <div class="tbl"><table><thead><tr><th>${tx("hItem")}</th><th>${tx("hWho")}</th><th class="num">${tx("hPlanned")}</th><th class="num">${tx("hActual")}</th><th class="num">${tx("hDelta")}</th><th class="num">${tx("hStart")}</th><th class="num">${tx("hEnd")}</th><th class="num">${tx("hPauses")}</th><th></th></tr></thead>
+      <tbody>${tr}${liveRow}${!tr&&!liveRow?`<tr><td colspan="9" style="color:var(--muted)">${tx("emptyLog")}</td></tr>`:""}</tbody></table></div>
+    <p class="note">${tx("logNote")}</p></section>`}
 function csv(){
   const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
-  const lines=[t("csvHead")];
+  const lines=[tx("csvHead")];
   logRows().forEach(r=>lines.push([q(r.title),q(r.speaker),fmtDur(r.plannedMs/1000),fmtDur(r.elapsedMs/1000),fmtDelta(r.elapsedMs-r.plannedMs),
     new Date(r.startedAt).toLocaleString(LOCALE),new Date(r.endedAt).toLocaleString(LOCALE),fmtDur(r.pausedMs/1000)].map(x=>/^"/.test(x)?x:q(x)).join(",")));
   return lines.join("\n")}
 
 function askHTML(){
-  return `<div class="ask"><div class="row" style="justify-content:space-between;align-items:flex-start"><h1>${t("askTitle")}</h1>${langBtn()}</div><p class="note" style="font-size:14px">${t("askLead")}</p>
+  return `<div class="ask"><div class="row" style="justify-content:space-between;align-items:flex-start"><h1>${tx("askTitle")}</h1>${langBtn()}</div><p class="note" style="font-size:14px">${tx("askLead")}</p>
     ${SID?`<form id="askForm" class="stack" style="gap:10px;margin-top:16px">
-      <textarea class="f" id="askText" rows="4" maxlength="400" required placeholder="${t("askPh")}"></textarea>
-      <input class="f" id="askName" maxlength="60" placeholder="${t("namePh")}">
-      <div class="row"><button class="btn primary" type="submit">${t("send")}</button><a class="btn ghost" href="#${slug("agenda")}">${t("seeAgenda")}</a></div></form>`
-      :`<p class="note">${t("askNoSession")}</p>`}</div>`}
+      <textarea class="f" id="askText" rows="4" maxlength="400" required placeholder="${tx("askPh")}"></textarea>
+      <input class="f" id="askName" maxlength="60" placeholder="${tx("namePh")}">
+      <div class="row"><button class="btn primary" type="submit">${tx("send")}</button><a class="btn ghost" href="#${slug("agenda")}">${tx("seeAgenda")}</a></div></form>`
+      :`<p class="note">${tx("askNoSession")}</p>`}</div>`}
 
 function qrSVG(text){try{const q=qrcode(0,"M");q.addData(text);q.make();return q.createSvgTag({cellSize:6,margin:2,scalable:true})}catch(e){return ""}}
 function connectHTML(){
   const shown=v=>BASE.replace(/^https?:\/\//,"")+"?s="+SID+"#"+slug(v);
   const row=(label,v,desc)=>`<div class="share-row"><div class="qr sm">${qrSVG(linkFor(v,false))}</div>
     <div class="share-txt"><b>${label}</b><span class="note" style="margin:0">${desc}</span><span class="linkbox">${esc(shown(v))}</span>
-    <div><button class="btn sm" data-a="copy" data-link="${esc(linkFor(v,false))}">${t("copyLink")}</button></div></div></div>`;
-  const hero=canWrite?`<section class="card"><h2>${t("phoneControl")}</h2>
+    <div><button class="btn sm" data-a="copy" data-link="${esc(linkFor(v,false))}">${tx("copyLink")}</button></div></div></div>`;
+  const hero=canWrite?`<section class="card"><h2>${tx("phoneControl")}</h2>
     <div class="hero-body"><div class="qr lg">${qrSVG(linkFor("controle",true))}</div>
-      <ol class="steps"><li>${t("step1")}</li><li>${t("step2")}</li><li>${t("step3")}</li></ol></div>
-    <p class="warn" style="margin:0 0 12px">${t("qrWarn")}</p>
-    <div class="row"><a class="btn primary" href="#${slug("palco")}">${t("openStageHere")}</a><button class="btn" data-a="copy" data-link="${esc(linkFor("controle",true))}">${t("copyCtl")}</button></div></section>`:"";
+      <ol class="steps"><li>${tx("step1")}</li><li>${tx("step2")}</li><li>${tx("step3")}</li></ol></div>
+    <p class="warn" style="margin:0 0 12px">${tx("qrWarn")}</p>
+    <div class="row"><a class="btn primary" href="#${slug("palco")}">${tx("openStageHere")}</a><button class="btn" data-a="copy" data-link="${esc(linkFor("controle",true))}">${tx("copyCtl")}</button></div></section>`:"";
   return `<div class="share ${canWrite?"":"solo"}">${hero}<section class="card"><div class="row" style="justify-content:space-between;margin-bottom:8px">
-      <h2 style="margin:0">${t("session")} <span class="code">${SID}</span></h2>${canWrite?"":`<a class="btn sm" href="#${slug("palco")}">${t("openStage")}</a>`}</div>
-    ${row(t("rowQs"),"perguntas",t("rowQsD"))}
-    ${row(t("rowAg"),"agenda",t("rowAgD"))}
-    ${canWrite?row(t("rowSt"),"palco",t("rowStD")):""}</section></div>`}
+      <h2 style="margin:0">${tx("session")} <span class="code">${SID}</span></h2>${canWrite?"":`<a class="btn sm" href="#${slug("palco")}">${tx("openStage")}</a>`}</div>
+    ${row(tx("rowQs"),"perguntas",tx("rowQsD"))}
+    ${row(tx("rowAg"),"agenda",tx("rowAgD"))}
+    ${canWrite?row(tx("rowSt"),"palco",tx("rowStD")):""}</section></div>`}
 
 function homeHTML(){
   const mine=Object.entries(lsGet("ah-sessions",{})).sort((a,b)=>b[1].at-a[1].at).slice(0,8);
   return `<div class="home"><div class="row" style="justify-content:space-between;align-items:flex-start"><h1>Remote Stage Timer</h1>${langBtn()}</div>
-    <p class="lead">${t("homeLead")}</p>
-    <div class="row"><button class="btn primary" id="btnCreate">${t("create")}</button></div>
-    <section class="card"><h2>${t("join")}</h2><form class="join" id="joinForm"><input class="f" id="joinCode" maxlength="8" placeholder="${t("codePh")}" aria-label="${t("codeAria")}" autocomplete="off"><button class="btn" type="submit">${t("enter")}</button></form>
-      <p class="note">${t("joinNote")}</p></section>
-    ${mine.length?`<section class="card"><h2>${t("mine")}</h2><div class="mine">${mine.map(([id,m])=>`<a href="${BASE}?s=${id}#${slug("controle")}"><span>${esc(m.show||t("defaultShow"))}</span><span>${id} · ${new Date(m.at).toLocaleDateString(LOCALE)}</span></a>`).join("")}</div></section>`:""}
+    <p class="lead">${tx("homeLead")}</p>
+    <div class="row"><button class="btn primary" id="btnCreate">${tx("create")}</button></div>
+    <section class="card"><h2>${tx("join")}</h2><form class="join" id="joinForm"><input class="f" id="joinCode" maxlength="8" placeholder="${tx("codePh")}" aria-label="${tx("codeAria")}" autocomplete="off"><button class="btn" type="submit">${tx("enter")}</button></form>
+      <p class="note">${tx("joinNote")}</p></section>
+    ${mine.length?`<section class="card"><h2>${tx("mine")}</h2><div class="mine">${mine.map(([id,m])=>`<a href="${BASE}?s=${id}#${slug("controle")}"><span>${esc(m.show||tx("defaultShow"))}</span><span>${id} · ${new Date(m.at).toLocaleDateString(LOCALE)}</span></a>`).join("")}</div></section>`:""}
   </div>`}
 function bindHome(){
-  $("#btnCreate").onclick=async e=>{e.target.disabled=true;e.target.textContent=t("creating");
-    try{const r=await rpc("create_session",{});lsSet("ah-key-"+r.id,r.key);const all=lsGet("ah-sessions",{});all[r.id]={show:t("defaultShow"),at:Date.now()};lsSet("ah-sessions",all);
+  $("#btnCreate").onclick=async e=>{e.target.disabled=true;e.target.textContent=tx("creating");
+    try{const r=await rpc("create_session",{});lsSet("ah-key-"+r.id,r.key);const all=lsGet("ah-sessions",{});all[r.id]={show:tx("defaultShow"),at:Date.now()};lsSet("ah-sessions",all);
       location.href=BASE+"?s="+r.id+"#"+slug("conectar")}
-    catch(err){e.target.disabled=false;e.target.textContent=t("create");toast(t("createFail"))}};
+    catch(err){e.target.disabled=false;e.target.textContent=tx("create");toast(tx("createFail"))}};
   $("#joinForm").onsubmit=e=>{e.preventDefault();const c=$("#joinCode").value.toUpperCase().replace(/[^A-Z0-9]/g,"");if(c)location.href=BASE+"?s="+c+"#"+slug("agenda")}}
 
 /* ---------- tick ---------- */
@@ -687,7 +687,7 @@ function tick(){
     $("#stClock").textContent=clock(now,false);$("#stShow").textContent=S.show;
     const t=$("#stTime"),sub=$("#stSub"),bar=$("#stBar");
     if(L){t.textContent=L.main;t.className="stage-time "+(L.it.mode==="tod"?"":L.phase);sub.textContent=L.sub;$("#stTitle").textContent=L.it.title;$("#stSpk").textContent=L.it.speaker;
-      bar.style.width=(L.progress*100)+"%";bar.className=L.phase;const n=S.items[idx(L.it.id)+1];$("#stNext").textContent=n?t("upNext")+n.title:""}
+      bar.style.width=(L.progress*100)+"%";bar.className=L.phase;const n=S.items[idx(L.it.id)+1];$("#stNext").textContent=n?tx("upNext")+n.title:""}
     else{t.textContent=clock(now,false);t.className="stage-time";sub.textContent="";$("#stTitle").textContent=S.show;$("#stSpk").textContent="";bar.style.width="0";$("#stNext").textContent=""}
     const m=$("#stMsg");
     if(msg&&msg.text){m.hidden=false;if(m.textContent!==msg.text)m.textContent=msg.text;m.style.color=COLORS[msg.color]||COLORS.white;
@@ -699,15 +699,15 @@ function tick(){
   if(mt){
     if(L){mt.textContent=L.main;mt.className="tm "+(L.it.mode==="tod"?"":L.phase);$("#mnTitle").textContent=L.it.title+(L.it.speaker?" · "+L.it.speaker:"");
       $("#mnBar").style.width=(L.progress*100)+"%";$("#mnBar").className=L.phase;
-      $("#mnState").textContent=L.started?(S.running?(L.remaining<0?t("over"):t("onAir")):t("paused")):t("cued");$("#mnSub").textContent=L.sub||(t("ends")+" "+(S.running?clock(now+L.remaining,false):"—"))}
-    else{mt.textContent="0:00";mt.className="tm";$("#mnTitle").textContent=S.items.length?t("pick"):"";$("#mnBar").style.width="0";$("#mnState").textContent=t("stopped");$("#mnSub").textContent=""}
-    $("#mnMsg").textContent=(S.blackout?t("blackoutOn"):"")+(msg&&msg.text?t("msgOn")+msg.text:"");
-    const b=$("#btnToggle");if(b)b.textContent=S.running?t("pause"):(L&&L.started?t("resume"):t("start"))}
+      $("#mnState").textContent=L.started?(S.running?(L.remaining<0?tx("over"):tx("onAir")):tx("paused")):tx("cued");$("#mnSub").textContent=L.sub||(tx("ends")+" "+(S.running?clock(now+L.remaining,false):"—"))}
+    else{mt.textContent="0:00";mt.className="tm";$("#mnTitle").textContent=S.items.length?tx("pick"):"";$("#mnBar").style.width="0";$("#mnState").textContent=tx("stopped");$("#mnSub").textContent=""}
+    $("#mnMsg").textContent=(S.blackout?tx("blackoutOn"):"")+(msg&&msg.text?tx("msgOn")+msg.text:"");
+    const b=$("#btnToggle");if(b)b.textContent=S.running?tx("pause"):(L&&L.started?tx("resume"):tx("start"))}
   const lgl=$("#lgLive");if(lgl&&L)lgl.textContent=fmtDur(L.elapsed/1000)}
 
 /* ---------- eventos ---------- */
 function bind(){
-  const sn=$("#showName");if(sn)sn.addEventListener("change",()=>{if(guard()){S.show=sn.value.trim()||t("defaultShow");save()}});
+  const sn=$("#showName");if(sn)sn.addEventListener("change",()=>{if(guard()){S.show=sn.value.trim()||tx("defaultShow");save()}});
   const app=$("#app");
   app.onclick=e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
     const row=b.closest("[data-id]"),id=row&&row.dataset.id,mrow=b.closest("[data-mid]"),mid=mrow&&mrow.dataset.mid,qrow=b.closest("[data-qid]"),qid=qrow&&qrow.dataset.qid;
@@ -724,7 +724,7 @@ function bind(){
       case"copy":copyText(b.dataset.link);break;
       case"csvCopy":copyCsv();break;case"csvSave":saveCsv();break;
       case"ldel":dropLog(b.dataset.lid);renderAll();break;
-      case"lclear":if(b.dataset.armed){Object.keys(LOGS).forEach(dropLog);renderAll()}else{b.dataset.armed="1";b.textContent=t("confirmClear");b.classList.add("on")}break;
+      case"lclear":if(b.dataset.armed){Object.keys(LOGS).forEach(dropLog);renderAll()}else{b.dataset.armed="1";b.textContent=tx("confirmClear");b.classList.add("on")}break;
     }};
   app.onchange=e=>{const el=e.target;
     if(el.dataset.f){const id=el.closest("[data-id]").dataset.id;const f=el.dataset.f;let v=el.value;
@@ -733,12 +733,12 @@ function bind(){
     else if(el.dataset.m){updMsg(el.closest("[data-mid]").dataset.mid,{text:el.value})}};
   app.addEventListener("focusout",()=>setTimeout(()=>{if(pendingRender&&!isEditing())renderAll()},0));
   const f=$("#askForm");if(f)f.addEventListener("submit",async e=>{e.preventDefault();const text=$("#askText").value.trim();if(!text)return;
-    try{await rpc("add_question",{p_id:SID,p_text:text,p_name:$("#askName").value.trim()});ping();$("#askText").value="";toast(t("qSent"))}
-    catch(err){toast(t("qFail"))}})}
+    try{await rpc("add_question",{p_id:SID,p_text:text,p_name:$("#askName").value.trim()});ping();$("#askText").value="";toast(tx("qSent"))}
+    catch(err){toast(tx("qFail"))}})}
 function bindStage(){
-  $("#stFull").onclick=async()=>{try{await document.documentElement.requestFullscreen()}catch(e){toast(t("noFullscreen"))}
+  $("#stFull").onclick=async()=>{try{await document.documentElement.requestFullscreen()}catch(e){toast(tx("noFullscreen"))}
     try{await navigator.wakeLock.request("screen")}catch(e){}};
-  $("#stSound").onclick=()=>{ensureAudio();$("#stSound").textContent=soundOn?t("soundOnShort"):t("soundOffShort")};
+  $("#stSound").onclick=()=>{ensureAudio();$("#stSound").textContent=soundOn?tx("soundOnShort"):tx("soundOffShort")};
   const st=$("#stage");let idleT;const wake=()=>{st.classList.remove("idle");clearTimeout(idleT);idleT=setTimeout(()=>st.classList.add("idle"),2500)};
   st.addEventListener("mousemove",wake);wake()}
 document.addEventListener("keydown",e=>{
@@ -748,22 +748,22 @@ document.addEventListener("keydown",e=>{
   if(k===" "){e.preventDefault();toggle()}else if(k==="arrowright")next();else if(k==="arrowleft")prev();else if(k==="f")flash();else if(k==="b")blackout()});
 window.addEventListener("hashchange",()=>{renderAll();announce()});
 
-async function copyText(t){try{await navigator.clipboard.writeText(t);toast(t("linkCopied"))}catch(e){toast(t("copyFail"))}}
+async function copyText(t){try{await navigator.clipboard.writeText(t);toast(tx("linkCopied"))}catch(e){toast(tx("copyFail"))}}
 function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>el.hidden=true,2600)}
-async function copyCsv(){const t=csv();try{await navigator.clipboard.writeText(t);toast(t("csvCopied"))}catch(e){
-  const ta=document.createElement("textarea");ta.value=t;ta.className="f";ta.rows=6;$("#app .card").append(ta);ta.select();toast(t("csvSelected"))}}
-function saveCsv(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv()],{type:"text/csv"}));a.download=`${t("csvFile")}-${todayKey()}.csv`;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+async function copyCsv(){const t=csv();try{await navigator.clipboard.writeText(t);toast(tx("csvCopied"))}catch(e){
+  const ta=document.createElement("textarea");ta.value=t;ta.className="f";ta.rows=6;$("#app .card").append(ta);ta.select();toast(tx("csvSelected"))}}
+function saveCsv(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv()],{type:"text/csv"}));a.download=`${tx("csvFile")}-${todayKey()}.csv`;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 function importCsv(replace){
   if(!guard())return;const txt=($("#csvIn")||{}).value||"";
   const mm={regressivo:"down",progressivo:"up",hora:"tod","regressivo+hora":"down+tod",countdown:"down",countup:"up",time:"tod","countdown+time":"down+tod"},tm={manual:"manual",encadeado:"linked",agendado:"scheduled",linked:"linked",scheduled:"scheduled"};
   const items=txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.split(l.includes(";")?";":",").map(s=>s.trim());
-    return defaultItem({title:p[0]||t("untitled"),speaker:p[1]||"",dur:parseDur(p[2]||"5")||300,mode:mm[(p[3]||"").toLowerCase()]||"down",trigger:tm[(p[4]||"").toLowerCase()]||"manual",at:p[5]||""})});
-  if(!items.length){toast(t("pasteOne"));return}
-  if(replace){resetTimer();S.activeId=null;S.items=items}else S.items.push(...items);save();toast(t("nItems",{n:items.length}))}
+    return defaultItem({title:p[0]||tx("untitled"),speaker:p[1]||"",dur:parseDur(p[2]||"5")||300,mode:mm[(p[3]||"").toLowerCase()]||"down",trigger:tm[(p[4]||"").toLowerCase()]||"manual",at:p[5]||""})});
+  if(!items.length){toast(tx("pasteOne"));return}
+  if(replace){resetTimer();S.activeId=null;S.items=items}else S.items.push(...items);save();toast(tx("nItems",{n:items.length}))}
 function loadSample(){
   if(!guard())return;
-  S.items=t("sample").map(([title,speaker,m])=>defaultItem({title,speaker,dur:m*60,trigger:"manual"}));
-  S.messages=t("sampleMsgs").map(([text,color])=>({id:uid(),text,color}));
+  S.items=tx("sample").map(([title,speaker,m])=>defaultItem({title,speaker,dur:m*60,trigger:"manual"}));
+  S.messages=tx("sampleMsgs").map(([text,color])=>({id:uid(),text,color}));
   save()}
 
 /* ---------- boot ---------- */
@@ -784,7 +784,7 @@ function onPresence(){
   const st=chan.presenceState();const list=Object.values(st).flat();peers=list.length;
   const ctl=list.some(p=>p.ctl);
   // o celular escaneou o QR: o notebook que mostra o QR vai sozinho para o palco
-  if(ctl&&!ctlSeen&&currentView()==="conectar"&&canWrite){ctlSeen=true;toast(t("phoneIn"));setTimeout(()=>{location.hash=slug("palco")},1200)}
+  if(ctl&&!ctlSeen&&currentView()==="conectar"&&canWrite){ctlSeen=true;toast(tx("phoneIn"));setTimeout(()=>{location.hash=slug("palco")},1200)}
   ctlSeen=ctlSeen||ctl;
   const pl=document.querySelector(".pill");if(pl&&!isEditing())renderAll()}
 setInterval(tick,200);
