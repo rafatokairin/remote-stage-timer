@@ -30,13 +30,15 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px
 *{box-sizing:border-box}
 button,input,select,textarea{font:inherit;color:inherit}
 .wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 32px;max-width:1320px;margin:0 auto}
-header.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding-block:10px;border-bottom:1px solid var(--line);margin-bottom:16px}
+header.top{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand meta" "tabs tabs";align-items:center;gap:8px 16px;padding-block:10px 0;border-bottom:1px solid var(--line);margin-bottom:16px}
+header.top .brand{grid-area:brand}header.top .meta{grid-area:meta}header.top nav.tabs{grid-area:tabs}
+.brand a{white-space:nowrap}
 .brand{display:flex;align-items:baseline;gap:8px;min-width:0;flex:1 1 220px}
 .brand small{font-family:var(--display);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-size:13px}
 #showName{font-family:var(--display);font-weight:700;font-size:26px;border:1px solid transparent;background:transparent;border-radius:6px;padding:0 6px;min-width:0;width:100%}
 #showName:hover,#showName:focus{border-color:var(--line);background:var(--panel)}
-nav.tabs{display:flex;flex-wrap:wrap;gap:4px}
-nav.tabs a{padding:6px 10px;border-radius:6px;text-decoration:none;color:var(--muted);font-weight:500}
+nav.tabs{display:flex;flex-wrap:nowrap;gap:4px;overflow-x:auto;scrollbar-width:none;padding-bottom:8px;max-width:100%}nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs a{padding:6px 10px;border-radius:6px;text-decoration:none;color:var(--muted);font-weight:500;white-space:nowrap;flex:none}
 nav.tabs a[aria-current="page"]{background:var(--fg);color:var(--bg)}
 .meta{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:13px;color:var(--muted)}
 .pill{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);font-family:var(--body);font-size:12px;white-space:nowrap}
@@ -60,14 +62,15 @@ button,a{touch-action:manipulation}
   .ctrls{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:8px}
   .ctrls .btn{min-height:46px;padding:6px 4px;white-space:normal;line-height:1.1}
   .it .acts .btn.primary{min-height:40px;padding:6px 12px}
-  nav.tabs{flex-wrap:nowrap;overflow-x:auto;max-width:100%;scrollbar-width:none}
-  header.top .meta{width:100%;justify-content:space-between}
+  header.top{grid-template-columns:minmax(0,1fr);grid-template-areas:"brand" "meta" "tabs"}
+  header.top .meta{justify-content:space-between}
+  #showName{font-size:22px}
 }
 section.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
 .stack{display:flex;flex-direction:column;gap:16px;min-width:0}
 h2{font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.btn{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn{color:var(--fg);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap}
 .btn:hover{border-color:var(--fg)}
 .btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
@@ -89,7 +92,7 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
 .bar i{display:block;height:100%;width:0;background:var(--stage-fg);transition:width .25s linear}
 .bar i.yellow{background:var(--stage-y)} .bar i.red,.bar i.over{background:var(--stage-r)}
 .monitor .msgprev{font-size:13px;color:var(--stage-dim)}
-.ctrls{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:6px;margin-top:10px}
+.ctrls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
 
 /* rundown */
 .rd{display:flex;flex-direction:column;gap:6px}
@@ -177,11 +180,21 @@ body.stage-mode{background:var(--stage-bg);color:var(--stage-fg)}
 .mine a{display:flex;justify-content:space-between;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line);color:inherit;text-decoration:none}
 .mine a span:last-child{font-family:var(--mono);color:var(--muted)}
 .code{font-family:var(--mono);letter-spacing:.18em;font-weight:500}
-.qrgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-.qrcard{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
-.qr{background:#fff;padding:12px;border-radius:10px;line-height:0;max-width:100%}
-.qr svg,.qr img{width:min(260px,70vw);height:auto;display:block}
-.qrcard.big .qr svg,.qrcard.big .qr img{width:min(340px,80vw)}
+.share{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:16px;align-items:start}
+.share.solo{grid-template-columns:minmax(0,1fr);max-width:640px}
+@media (max-width:900px){.share{grid-template-columns:minmax(0,1fr)}}
+.hero-body{display:flex;gap:28px;align-items:center;margin-bottom:14px}
+.qr{background:#fff;border-radius:12px;padding:10px;aspect-ratio:1;flex:none;line-height:0;max-width:100%}
+.qr svg{width:100%;height:100%;display:block}
+.qr.lg{width:min(300px,100%)}
+.qr.sm{width:104px;padding:6px;border-radius:8px}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:12px;font-size:15px;min-width:0;flex:1}
+.steps li::marker{font-family:var(--display);font-weight:700;color:var(--accent)}
+.share-row{display:flex;gap:14px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.share-row:first-child{border-top:0;padding-top:4px}
+.share-txt{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.share-txt b{font-weight:600}
+@media (max-width:600px){.hero-body{flex-direction:column;align-items:stretch;gap:18px}.hero-body .qr.lg{margin-inline:auto;width:min(280px,100%)}.qr.sm{width:84px}}
 .linkbox{font-family:var(--mono);font-size:12px;color:var(--muted);overflow-wrap:anywhere;max-width:100%}
 .warn{border:1px solid var(--warn);color:var(--fg);background:var(--soft);border-radius:8px;padding:8px 10px;font-size:13px}
 .ask h1{font-family:var(--display);font-size:34px;margin:0 0 6px}
@@ -447,7 +460,7 @@ function questionsHTML(d){
   if(mode!=="net"&&!QS.length)return `<section class="card a-q"><h2>Perguntas da plateia</h2><p class="note">Conectando…</p></section>`;
   const rows=QS.map(q=>`<div class="q" data-qid="${q.id}"><div>${esc(q.text)}</div><small>${esc(q.name||"Anônimo")} · ${clock(q.at,false)}</small>
     <div class="row"><button class="btn sm" data-a="qmsg" ${d}>Virar mensagem</button><button class="btn sm ghost" data-a="qdel" ${d}>Dispensar</button></div></div>`).join("");
-  return `<section class="card a-q"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Perguntas da plateia ·${QS.length}</h2><a class="btn sm" href="#conectar">QR das perguntas</a></div>
+  return `<section class="card a-q"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Perguntas da plateia · ${QS.length}</h2><a class="btn sm" href="#conectar">QR das perguntas</a></div>
     <div class="stack" style="gap:10px">${rows||`<p class="note" style="margin:0">Mostre o QR das perguntas para o pessoal. O que chegar aparece aqui.</p>`}</div></section>`}
 
 function stageHTML(){
@@ -511,18 +524,20 @@ function askHTML(){
 
 function qrSVG(text){try{const q=qrcode(0,"M");q.addData(text);q.make();return q.createSvgTag({cellSize:6,margin:2,scalable:true})}catch(e){return ""}}
 function connectHTML(){
-  const view2=(label,v,desc,key,big)=>`<div class="qrcard ${big?"big":""}"><h2 style="margin:0">${label}</h2><div class="qr">${qrSVG(linkFor(v,key))}</div>
-    <p class="note" style="margin:0">${desc}</p><div class="linkbox">${esc(linkFor(v,key))}</div>
-    <button class="btn sm" data-a="copy" data-link="${esc(linkFor(v,key))}">Copiar link</button></div>`;
-  return `<section class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Sessão <span class="code">${SID}</span></h2>
-      <a class="btn primary" href="#palco">Abrir palco neste aparelho</a></div>
-    ${canWrite?`<p class="warn">O QR de controle dá acesso total à sessão. Não mostre no telão para a plateia.</p>`:""}
-    <div class="qrgrid" style="margin-top:12px">
-    ${canWrite?view2("Controle pelo celular","controle","Escaneie com o celular de quem vai rodar os tempos. Quando ele conectar, este aparelho vai sozinho para o palco.",true,true):""}
-    ${view2("Perguntas da plateia","perguntas","Pode mostrar para todo mundo: só envia perguntas.",false,false)}
-    ${view2("Agenda","agenda","Só leitura: pauta, o que está no ar e o que vem depois.",false,false)}
-    ${canWrite?view2("Palco em outro aparelho","palco","Só leitura: abre o timer em tela cheia num segundo notebook ou TV.",false,false):""}
-    </div></section>`}
+  const shown=v=>BASE.replace(/^https?:\/\//,"")+"?s="+SID+"#"+v;
+  const row=(label,v,desc)=>`<div class="share-row"><div class="qr sm">${qrSVG(linkFor(v,false))}</div>
+    <div class="share-txt"><b>${label}</b><span class="note" style="margin:0">${desc}</span><span class="linkbox">${esc(shown(v))}</span>
+    <div><button class="btn sm" data-a="copy" data-link="${esc(linkFor(v,false))}">Copiar link</button></div></div></div>`;
+  const hero=canWrite?`<section class="card"><h2>Controle pelo celular</h2>
+    <div class="hero-body"><div class="qr lg">${qrSVG(linkFor("controle",true))}</div>
+      <ol class="steps"><li>Abra a câmera do celular de quem vai rodar os tempos.</li><li>Aponte para o QR e toque no link que aparecer.</li><li>Quando o celular conectar, esta tela vai sozinha para o palco.</li></ol></div>
+    <p class="warn" style="margin:0 0 12px">Este QR dá controle total da sessão. Não mostre no telão.</p>
+    <div class="row"><a class="btn primary" href="#palco">Abrir palco neste aparelho</a><button class="btn" data-a="copy" data-link="${esc(linkFor("controle",true))}">Copiar link de controle</button></div></section>`:"";
+  return `<div class="share ${canWrite?"":"solo"}">${hero}<section class="card"><div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">Sessão <span class="code">${SID}</span></h2>${canWrite?"":`<a class="btn sm" href="#palco">Abrir palco</a>`}</div>
+    ${row("Perguntas da plateia","perguntas","Pode ir para o telão: só envia perguntas.")}
+    ${row("Agenda","agenda","Só leitura: pauta, o que está no ar e o que vem depois.")}
+    ${canWrite?row("Palco em outro aparelho","palco","Só leitura: o timer em tela cheia num segundo notebook ou TV."):""}</section></div>`}
 
 function homeHTML(){
   const mine=Object.entries(lsGet("ah-sessions",{})).sort((a,b)=>b[1].at-a[1].at).slice(0,8);
