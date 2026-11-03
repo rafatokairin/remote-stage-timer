@@ -198,6 +198,31 @@ body.stage-mode{background:var(--stage-bg);color:var(--stage-fg)}
 .linkbox{font-family:var(--mono);font-size:12px;color:var(--muted);overflow-wrap:anywhere;max-width:100%}
 .warn{border:1px solid var(--warn);color:var(--fg);background:var(--soft);border-radius:8px;padding:8px 10px;font-size:13px}
 .ask h1{font-family:var(--display);font-size:34px;margin:0 0 6px}
+
+/* celular: campos de texto em largura cheia e alvos de toque de 44px */
+@media (max-width:600px){
+  input.f,select.f,textarea.f{font-size:16px;min-height:44px;padding:9px 11px}
+  textarea.f{min-height:96px}
+  .it{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"n acts" "fields fields" "status status" "cfg cfg";gap:10px;padding:12px}
+  .it .n{grid-area:n;text-align:left;font-size:13px;width:auto}
+  .it .n::before{content:"Nº "}
+  .it .acts{grid-area:acts;justify-content:flex-end;gap:6px}
+  .it .acts .btn.ghost{min-width:44px;min-height:40px;border-color:var(--line);font-size:16px}
+  .it .fields{grid-area:fields;grid-template-columns:minmax(0,1fr) 96px;gap:8px}
+  .it .fields input[data-f="title"]{grid-column:1/-1;font-weight:600}
+  .it .fields .spk{grid-column:auto;grid-row:auto}
+  .it .status{grid-area:status;grid-column:auto}
+  .it details.cfg{grid-area:cfg;grid-column:auto}
+  details.cfg summary{padding:6px 0;font-size:14px}
+  .cfggrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .msg{grid-template-columns:minmax(0,1fr);gap:8px;padding:10px}
+  .msg .row{justify-content:space-between;flex-wrap:nowrap;gap:6px}
+  .swatch{width:30px;height:30px;flex:none}
+  .msg .btn.sm{min-height:40px;padding:6px 14px;font-size:14px}
+  .msg .btn.ghost{min-width:40px;font-size:18px;border-color:var(--line)}
+  @media (max-width:380px){.swatch{width:28px;height:28px}.msg .btn.sm{padding:6px 10px}}
+  .q .btn.sm{min-height:40px;padding:6px 12px;font-size:14px}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
