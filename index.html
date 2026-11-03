@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8">
+<html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Cronômetro All Hands</title>
-<meta name="description" content="Cronômetro de palco do All Hands: pauta, palco em tela cheia, controle pelo celular via QR e registro dos tempos.">
+<title>Remote Stage Timer</title>
+<meta name="description" content="Remote-controlled stage timer: rundown, fullscreen stage display, phone control by QR code and a log of actual times.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -72,6 +72,7 @@ h2{font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.1em
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .btn{color:var(--fg);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap}
 .btn:hover{border-color:var(--fg)}
+.langbtn{font-family:var(--mono);letter-spacing:.08em;flex:none}
 .btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .btn.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
@@ -205,7 +206,7 @@ body.stage-mode{background:var(--stage-bg);color:var(--stage-fg)}
   textarea.f{min-height:96px}
   .it{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"n acts" "fields fields" "status status" "cfg cfg";gap:10px;padding:12px}
   .it .n{grid-area:n;text-align:left;font-size:13px;width:auto}
-  .it .n::before{content:"Nº "}
+  .it .n::before{content:attr(data-pre)}
   .it .acts{grid-area:acts;justify-content:flex-end;gap:6px}
   .it .acts .btn.ghost{min-width:44px;min-height:40px;border-color:var(--line);font-size:16px}
   .it .fields{grid-area:fields;grid-template-columns:minmax(0,1fr) 96px;gap:8px}
@@ -245,16 +246,103 @@ const QP=new URLSearchParams(location.search);
 const SID=(QP.get("s")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,12)||null;
 function lsGet(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+const LANGS={pt:"pt-BR",en:"en-US"};
+let LANG=lsGet("rst-lang",null);if(!LANGS[LANG])LANG=/^pt/i.test(navigator.language||"")?"pt":"en";
+const LOCALE=LANGS[LANG];document.documentElement.lang=LOCALE;
+const DICT={
+pt:{defaultShow:"Meu evento",newItem:"Novo item",of:"de",noKey:"Este aparelho não tem a chave de controle desta sessão.",offlineQueued:"Sem internet. Guardei a alteração e vou reenviar sozinho.",
+saveFail:"Não consegui salvar. Confira a internet.",readOnly:"Só o celular ou notebook com a chave (QR) controla esta sessão.",
+tabControl:"Controle",tabStage:"Palco",tabAgenda:"Agenda",tabModerator:"Moderador",tabLog:"Registro de tempos",tabQuestions:"Perguntas",tabConnect:"Conectar celular",screens:"Telas",
+readOnlyShort:"só leitura",sameState:"Todos nesta sessão veem o mesmo estado",session:"Sessão",connected1:"conectado",connectedN:"conectados",offlineTitle:"Sem internet; tentando de novo",
+offline:"Sem conexão",notFound:"Sessão não encontrada",connecting:"Conectando…",eventName:"Nome do evento",switchLang:"Switch to English",otherLang:"EN",
+noConfig:"Falta configurar o banco (config.js).",missingTitle:"Sessão {id} não existe",missingLead:"Confira o código ou crie uma sessão nova.",backHome:"Voltar ao início",
+onAir:"No ar",start:"Iniciar",prev:"Anterior",next:"Próximo",finish:"Encerrar",reset:"Zerar",blackout:"Tela preta",
+keys:"<kbd>Espaço</kbd> iniciar/pausar · <kbd>→</kbd> próximo · <kbd>←</kbd> anterior · <kbd>F</kbd> piscar · <kbd>B</kbd> tela preta",
+soundOn:"Som ligado neste aparelho",soundOff:"Ligar som neste aparelho",connectPhone:"Conectar celular",openStage:"Abrir palco",seeLog:"Ver registro",
+stOnAir:"no ar",stPaused:"pausado",stCued:"na fila",doneIn:"feito em",
+mDown:"Regressivo",mUp:"Progressivo",mTod:"Hora do dia",mDownTod:"Regressivo + hora",tManual:"Manual",tLinked:"Encadeado",tScheduled:"Agendado",
+title:"Título",speaker:"Quem apresenta",duration:"Duração",startThis:"Iniciar este",moveUp:"Subir",moveDown:"Descer",at:"às",settings:"Ajustes",
+type:"Tipo",trigger:"Início",schedAt:"Horário (agendado)",yellowAt:"Amarelo faltando (s)",redAt:"Vermelho faltando (s)",notes:"Notas",cue:"Deixar na fila",remove:"Remover",numPre:"Nº ",
+emptyRundown:"A pauta está vazia. Adicione os itens do evento ou importe um CSV.",loadSample:"Carregar pauta de exemplo",rundown:"Pauta",items:"itens",addItem:"Adicionar item",
+importCsv:"Importar CSV",csvHelp:"Uma linha por item: <code>título;quem apresenta;duração;tipo;início;horário</code>. Duração em minutos ou mm:ss. Tipo: regressivo, progressivo, hora, regressivo+hora. Início: manual, encadeado, agendado.",
+csvPh:"Abertura;Ana;5\nPalestra principal;Bruno;12:30;regressivo;encadeado",addToRundown:"Adicionar à pauta",replaceRundown:"Substituir a pauta",
+msgText:"Texto da mensagem",color:"Cor",hide:"Ocultar",show:"Mostrar",delMsg:"Apagar mensagem",messages:"Mensagens para o palco",flash:"Piscar tela",newMsg:"Nova",
+emptyMsgs:"Nenhuma mensagem. Ex.: \"Faltam 2 minutos\", \"Fale mais perto do microfone\".",
+questions:"Perguntas da plateia",anon:"Anônimo",toMessage:"Virar mensagem",dismiss:"Dispensar",questionsQr:"QR das perguntas",emptyQs:"Mostre o QR das perguntas para o público. O que chegar aparece aqui.",
+fullscreen:"Tela cheia",soundOnShort:"Som ligado",soundOffShort:"Ligar som",control:"Controle",
+now:"agora",agenda:"Agenda",emptyAgenda:"A pauta ainda não foi montada.",agendaNote:"Horários previstos contam a partir do que já começou. Itens agendados usam o horário marcado.",
+del:"Apagar",log:"Registro de tempos",copyCsv:"Copiar CSV",saveCsv:"Baixar CSV",clearLog:"Limpar registro",kDone:"itens feitos",kActual:"tempo real somado (previsto {p})",
+kDelta:"diferença total",kLate:"estouraram o tempo",kSpan:"do início ao fim",hItem:"Item",hWho:"Quem",hPlanned:"Previsto",hActual:"Real",hDelta:"Diferença",hStart:"Início",hEnd:"Fim",hPauses:"Pausas",
+emptyLog:"Nada registrado ainda. Cada item entra aqui quando você clica em Próximo ou Encerrar.",logNote:"O tempo real desconta as pausas. A diferença compara com a duração prevista na pauta (os +1 min dados no ar contam como estouro).",
+csvHead:"item,quem,previsto,real,diferenca,inicio,fim,pausas",csvFile:"tempos",
+askTitle:"Envie sua pergunta",askLead:"Quem conduz vê na hora e pode mostrar no telão.",askPh:"Sua pergunta",namePh:"Seu nome (opcional)",send:"Enviar pergunta",seeAgenda:"Ver agenda",askNoSession:"Abra pelo QR ou link da sessão.",
+copyLink:"Copiar link",phoneControl:"Controle pelo celular",step1:"Abra a câmera do celular de quem vai rodar os tempos.",step2:"Aponte para o QR e toque no link que aparecer.",
+step3:"Quando o celular conectar, esta tela vai sozinha para o palco.",qrWarn:"Este QR dá controle total da sessão. Não mostre no telão.",openStageHere:"Abrir palco neste aparelho",copyCtl:"Copiar link de controle",
+rowQs:"Perguntas do público",rowQsD:"Pode ir para o telão: só envia perguntas.",rowAg:"Agenda",rowAgD:"Só leitura: pauta, o que está no ar e o que vem depois.",rowSt:"Palco em outro aparelho",rowStD:"Só leitura: o timer em tela cheia num segundo notebook ou TV.",
+homeLead:"Timer de palco controlado pelo celular. Crie uma sessão no notebook do palco, escaneie o QR com o celular e controle os tempos de qualquer lugar. Cada item fica registrado com o tempo real.",
+create:"Criar sessão",creating:"Criando…",join:"Entrar numa sessão",codePh:"CÓDIGO",codeAria:"Código da sessão",enter:"Entrar",joinNote:"Com o código você vê agenda e palco e manda perguntas. Para controlar, use o QR de controle.",
+mine:"Sessões criadas neste aparelho",createFail:"Não consegui criar a sessão. Confira a internet.",
+upNext:"A seguir: ",over:"Estourado",paused:"Pausado",cued:"Na fila",ends:"termina",pick:"Escolha um item na pauta",stopped:"Parado",blackoutOn:"Palco em tela preta. ",msgOn:"Mensagem no palco: ",
+pause:"Pausar",resume:"Continuar",confirmClear:"Clique de novo para apagar tudo",qSent:"Pergunta enviada.",qFail:"Não consegui enviar. Tente de novo.",noFullscreen:"Tela cheia não está disponível aqui.",
+linkCopied:"Link copiado.",copyFail:"Não deu para copiar. Segure o link para copiar.",csvCopied:"CSV copiado.",csvSelected:"Selecionei o CSV abaixo. Copie com Ctrl+C.",
+untitled:"Sem título",pasteOne:"Cole ao menos uma linha.",nItems:"{n} itens na pauta.",phoneIn:"Celular conectado. Abrindo o palco.",
+colors:{white:"branco",green:"verde",yellow:"amarelo",red:"vermelho"},
+sample:[["Abertura","Exemplo: Apresentação",5],["Palestra principal","Exemplo: Palestrante",20],["Painel","Exemplo: Convidados",15],["Intervalo","",10],["Perguntas e respostas","Exemplo: Todos",10],["Encerramento","Exemplo: Apresentação",5]],
+sampleMsgs:[["Faltam 2 minutos","yellow"],["Encerre, por favor","red"],["Fale mais perto do microfone","white"]]},
+en:{defaultShow:"My event",newItem:"New item",of:"of",noKey:"This device doesn't have the control key for this session.",offlineQueued:"You're offline. Your change is saved and will be sent automatically.",
+saveFail:"Couldn't save. Check your connection.",readOnly:"Only a phone or laptop with the control key (QR) can control this session.",
+tabControl:"Control",tabStage:"Stage",tabAgenda:"Agenda",tabModerator:"Moderator",tabLog:"Time log",tabQuestions:"Questions",tabConnect:"Connect phone",screens:"Screens",
+readOnlyShort:"read-only",sameState:"Everyone in this session sees the same state",session:"Session",connected1:"connected",connectedN:"connected",offlineTitle:"Offline; retrying",
+offline:"Offline",notFound:"Session not found",connecting:"Connecting…",eventName:"Event name",switchLang:"Mudar para português",otherLang:"PT",
+noConfig:"The database isn't configured yet (config.js).",missingTitle:"Session {id} doesn't exist",missingLead:"Check the code or create a new session.",backHome:"Back to start",
+onAir:"On air",start:"Start",prev:"Previous",next:"Next",finish:"Finish",reset:"Reset",blackout:"Blackout",
+keys:"<kbd>Space</kbd> start/pause · <kbd>→</kbd> next · <kbd>←</kbd> previous · <kbd>F</kbd> flash · <kbd>B</kbd> blackout",
+soundOn:"Sound on for this device",soundOff:"Turn on sound for this device",connectPhone:"Connect phone",openStage:"Open stage",seeLog:"See log",
+stOnAir:"on air",stPaused:"paused",stCued:"cued",doneIn:"done in",
+mDown:"Countdown",mUp:"Count up",mTod:"Time of day",mDownTod:"Countdown + time",tManual:"Manual",tLinked:"Linked",tScheduled:"Scheduled",
+title:"Title",speaker:"Speaker",duration:"Duration",startThis:"Start this one",moveUp:"Move up",moveDown:"Move down",at:"at",settings:"Settings",
+type:"Type",trigger:"Start",schedAt:"Time (scheduled)",yellowAt:"Yellow when left (s)",redAt:"Red when left (s)",notes:"Notes",cue:"Cue it",remove:"Remove",numPre:"#",
+emptyRundown:"The rundown is empty. Add your event's segments or import a CSV.",loadSample:"Load sample rundown",rundown:"Rundown",items:"items",addItem:"Add segment",
+importCsv:"Import CSV",csvHelp:"One line per segment: <code>title;speaker;duration;type;start;time</code>. Duration in minutes or mm:ss. Type: countdown, countup, time, countdown+time. Start: manual, linked, scheduled.",
+csvPh:"Welcome;Ana;5\nKeynote;Bruno;12:30;countdown;linked",addToRundown:"Add to rundown",replaceRundown:"Replace rundown",
+msgText:"Message text",color:"Color",hide:"Hide",show:"Show",delMsg:"Delete message",messages:"Messages to the stage",flash:"Flash screen",newMsg:"New",
+emptyMsgs:"No messages yet. E.g. \"2 minutes left\", \"Speak closer to the mic\".",
+questions:"Audience questions",anon:"Anonymous",toMessage:"Make it a message",dismiss:"Dismiss",questionsQr:"Questions QR",emptyQs:"Show the questions QR to the audience. What they send shows up here.",
+fullscreen:"Fullscreen",soundOnShort:"Sound on",soundOffShort:"Turn on sound",control:"Control",
+now:"now",agenda:"Agenda",emptyAgenda:"The rundown hasn't been set up yet.",agendaNote:"Expected times count from what has already started. Scheduled segments use their set time.",
+del:"Delete",log:"Time log",copyCsv:"Copy CSV",saveCsv:"Download CSV",clearLog:"Clear log",kDone:"segments done",kActual:"total actual time (planned {p})",
+kDelta:"total difference",kLate:"ran over",kSpan:"start to finish",hItem:"Segment",hWho:"Speaker",hPlanned:"Planned",hActual:"Actual",hDelta:"Difference",hStart:"Start",hEnd:"End",hPauses:"Pauses",
+emptyLog:"Nothing logged yet. Each segment is logged when you press Next or Finish.",logNote:"Actual time excludes pauses. The difference compares with the planned duration (+1 min added on air counts as running over).",
+csvHead:"segment,speaker,planned,actual,difference,start,end,pauses",csvFile:"timings",
+askTitle:"Send your question",askLead:"The host sees it right away and can show it on screen.",askPh:"Your question",namePh:"Your name (optional)",send:"Send question",seeAgenda:"See agenda",askNoSession:"Open it from the session QR or link.",
+copyLink:"Copy link",phoneControl:"Phone control",step1:"Open the camera on the phone of whoever runs the timers.",step2:"Point it at the QR and tap the link that shows up.",
+step3:"When the phone connects, this screen switches to the stage by itself.",qrWarn:"This QR gives full control of the session. Don't show it on the big screen.",openStageHere:"Open stage on this device",copyCtl:"Copy control link",
+rowQs:"Audience questions",rowQsD:"Safe for the big screen: it only sends questions.",rowAg:"Agenda",rowAgD:"Read-only: rundown, what's on air and what's next.",rowSt:"Stage on another device",rowStD:"Read-only: the fullscreen timer on a second laptop or TV.",
+homeLead:"A stage timer you control from your phone. Create a session on the stage laptop, scan the QR with your phone and run the timers from anywhere. Every segment is logged with its actual time.",
+create:"Create session",creating:"Creating…",join:"Join a session",codePh:"CODE",codeAria:"Session code",enter:"Join",joinNote:"With the code you can see the agenda and stage and send questions. To control, use the control QR.",
+mine:"Sessions created on this device",createFail:"Couldn't create the session. Check your connection.",
+upNext:"Up next: ",over:"Over time",paused:"Paused",cued:"Cued",ends:"ends",pick:"Pick a segment in the rundown",stopped:"Stopped",blackoutOn:"Stage is blacked out. ",msgOn:"Message on stage: ",
+pause:"Pause",resume:"Resume",confirmClear:"Click again to delete everything",qSent:"Question sent.",qFail:"Couldn't send. Try again.",noFullscreen:"Fullscreen isn't available here.",
+linkCopied:"Link copied.",copyFail:"Couldn't copy. Press and hold the link to copy it.",csvCopied:"CSV copied.",csvSelected:"The CSV below is selected. Copy it with Ctrl+C.",
+untitled:"Untitled",pasteOne:"Paste at least one line.",nItems:"{n} segments in the rundown.",phoneIn:"Phone connected. Opening the stage.",
+colors:{white:"white",green:"green",yellow:"yellow",red:"red"},
+sample:[["Welcome","Example: Host",5],["Keynote","Example: Speaker",20],["Panel","Example: Guests",15],["Break","",10],["Q&A","Example: Everyone",10],["Closing","Example: Host",5]],
+sampleMsgs:[["2 minutes left","yellow"],["Please wrap up","red"],["Speak closer to the mic","white"]]}};
+const t=(k,vars)=>{let v=DICT[LANG][k];if(v==null)v=DICT.pt[k]??k;if(vars&&typeof v==="string")for(const n in vars)v=v.replace("{"+n+"}",vars[n]);return v};
+const SLUG_EN={controle:"control",palco:"stage",agenda:"agenda",moderador:"moderator",registro:"log",perguntas:"questions",conectar:"connect"};
+const slug=v=>LANG==="en"?SLUG_EN[v]||v:v;
+function setLang(l){lsSet("rst-lang",l);const h=location.hash.replace("#",""),v=VIEWS.find(x=>x===h||SLUG_EN[x]===h);
+  if(v)history.replaceState(null,"",location.pathname+location.search+"#"+(l==="en"?SLUG_EN[v]:v));location.reload()}
 let KEY=SID?(QP.get("k")||lsGet("ah-key-"+SID,null)):null;
 if(SID&&QP.get("k")){lsSet("ah-key-"+SID,QP.get("k"));history.replaceState(null,"",BASE+"?s="+SID+location.hash)}
-const linkFor=(v,withKey)=>BASE+"?s="+SID+(withKey&&KEY?"&k="+KEY:"")+"#"+v;
+const linkFor=(v,withKey)=>BASE+"?s="+SID+(withKey&&KEY?"&k="+KEY:"")+"#"+slug(v);
 const COLORS={white:"#f4f4f4",green:"#3ddc84",yellow:"#f5b700",red:"#ff3b30"};
 let OFFSET=0;const T=()=>Date.now()+OFFSET;
 
 function defaultState(){return{
-  show:"All Hands",items:[],messages:[],activeId:null,running:false,kickoff:0,elapsedBefore:0,extraMs:0,
+  show:t("defaultShow"),items:[],messages:[],activeId:null,running:false,kickoff:0,elapsedBefore:0,extraMs:0,
   runStartedAt:0,pausedMs:0,pauseStartedAt:0,shownMsgId:null,flashAt:0,blackout:false,firedOn:{},h24:true}}
-function defaultItem(p){return Object.assign({id:uid(),title:"Nova apresentação",speaker:"",notes:"",dur:600,mode:"down",trigger:"manual",at:"",wrapY:60,wrapR:15,chime:true},p||{})}
+function defaultItem(p){return Object.assign({id:uid(),title:t("newItem"),speaker:"",notes:"",dur:600,mode:"down",trigger:"manual",at:"",wrapY:60,wrapR:15,chime:true},p||{})}
 
 let S=defaultState(),LOGS={},QS=[];
 let mode="loading",canWrite=false,peers=0,queued=null,sb=null,chan=null,ctlSeen=false;
@@ -271,7 +359,7 @@ function fmtDur(sec){sec=Math.max(0,Math.round(sec));const h=Math.floor(sec/3600
   return h?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${m}:${String(s).padStart(2,"0")}`}
 function fmtMs(ms,up){const neg=ms<0;const a=Math.abs(ms);const sec=up||neg?Math.floor(a/1000):Math.ceil(a/1000);return (neg?"−":"")+fmtDur(sec)}
 function fmtDelta(ms){const s=Math.round(ms/1000);if(s===0)return "0:00";return (s>0?"+":"−")+fmtDur(Math.abs(s))}
-function clock(t,secs){return new Date(t).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:secs?"2-digit":undefined,hour12:!S.h24})}
+function clock(t,secs){return new Date(t).toLocaleTimeString(LOCALE,{hour:"2-digit",minute:"2-digit",second:secs?"2-digit":undefined,hour12:!S.h24})}
 function todayKey(){const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
 function atToday(hhmm){const m=/^(\d{1,2}):(\d{2})$/.exec(hhmm||"");if(!m)return null;const d=new Date();d.setHours(+m[1],+m[2],0,0);return d.getTime()}
 
@@ -286,7 +374,7 @@ function live(now){
   if(S.runStartedAt||S.running){ if(remaining<=0)phase="over"; else if(remaining<=it.wrapR*1000)phase="red"; else if(remaining<=it.wrapY*1000)phase="yellow"; }
   const progress=total>0?Math.min(1,elapsed/total):1;
   let main,sub="";
-  if(it.mode==="up"){main=fmtMs(elapsed,true);sub="de "+fmtDur(total/1000)}
+  if(it.mode==="up"){main=fmtMs(elapsed,true);sub=t("of")+" "+fmtDur(total/1000)}
   else if(it.mode==="tod"){main=clock(now,false);sub=fmtMs(remaining)}
   else if(it.mode==="down+tod"){main=fmtMs(remaining);sub=clock(now,false)}
   else main=fmtMs(remaining);
@@ -299,19 +387,19 @@ function ping(){if(chan)chan.send({type:"broadcast",event:"changed",payload:{at:
 // tenta de novo até a internet voltar, na mesma ordem; nada que você fez se perde enquanto a página estiver aberta
 function send(fn,args){outstanding++;
   const attempt=()=>rpc(fn,args).then(()=>{warned=false;if(mode!=="net"){mode="net";renderAll()}ping()}).catch(e=>{
-    if(e.code==="42501"){canWrite=false;toast("Este aparelho não tem a chave de controle desta sessão.");renderAll();return}
-    if(!warned){warned=true;toast("Sem internet. Guardei a alteração e vou reenviar sozinho.")}
+    if(e.code==="42501"){canWrite=false;toast(t("noKey"));renderAll();return}
+    if(!warned){warned=true;toast(t("offlineQueued"))}
     if(mode!=="off"){mode="off";renderAll()}return new Promise(r=>setTimeout(r,2500)).then(attempt)});
   return attempt().finally(()=>{outstanding--;if(!outstanding&&queued){const m=queued;queued=null;apply(m)}})}
 function save(){const snap=JSON.parse(JSON.stringify(S));writeChain=writeChain.then(()=>send("save_state",{p_id:SID,p_key:KEY,p_state:snap}));
   rememberSession();renderAll()}
 function saveLog(id,log){LOGS[id]=log;writeChain=writeChain.then(()=>send("save_log",{p_id:SID,p_key:KEY,p_log_id:id,p_log:log}))}
 function dropLog(id){delete LOGS[id];writeChain=writeChain.then(()=>send("save_log",{p_id:SID,p_key:KEY,p_log_id:id,p_log:null}))}
-function onWriteErr(){toast("Não consegui salvar. Confira a internet.")}
+function onWriteErr(){toast(t("saveFail"))}
 function rememberSession(){if(!SID||!KEY)return;const all=lsGet("ah-sessions",{});all[SID]={show:S.show,at:Date.now()};lsSet("ah-sessions",all)}
 
 /* ---------- ações ---------- */
-function guard(){if(!canWrite){toast("Só o celular ou notebook com a chave (QR) controla esta sessão.");return false}return true}
+function guard(){if(!canWrite){toast(t("readOnly"));return false}return true}
 function finishCurrent(now){
   const it=item(S.activeId);
   if(it&&S.runStartedAt){
@@ -373,30 +461,30 @@ function automate(now,L){
       S.firedOn[it.id]=tk;startItem(it.id,{});return}}}
 
 /* ---------- render ---------- */
-function currentView(){const h=location.hash.replace("#","");return VIEWS.includes(h)?h:(canWrite?"controle":"agenda")}
+function currentView(){const h=location.hash.replace("#","");return VIEWS.find(v=>v===h||SLUG_EN[v]===h)||(canWrite?"controle":"agenda")}
 function tabs(){
-  const labels={controle:"Controle",palco:"Palco",agenda:"Agenda",moderador:"Moderador",registro:"Registro de tempos",perguntas:"Perguntas",conectar:"Conectar celular"};
-  return `<nav class="tabs" aria-label="Telas">${VIEWS.filter(v=>canWrite||!["controle","moderador","registro"].includes(v)||v===view).map(v=>`<a href="#${v}" ${v===view?'aria-current="page"':""}>${labels[v]}</a>`).join("")}</nav>`}
+  const labels={controle:t("tabControl"),palco:t("tabStage"),agenda:t("tabAgenda"),moderador:t("tabModerator"),registro:t("tabLog"),perguntas:t("tabQuestions"),conectar:t("tabConnect")};
+  return `<nav class="tabs" aria-label="${t("screens")}">${VIEWS.filter(v=>canWrite||!["controle","moderador","registro"].includes(v)||v===view).map(v=>`<a href="#${slug(v)}" ${v===view?'aria-current="page"':""}>${labels[v]}</a>`).join("")}</nav>`}
 function syncPill(){
-  const ro=canWrite?"":" · só leitura";
-  if(mode==="net")return `<span class="pill live" title="Todos nesta sessão veem o mesmo estado">Sessão <span class="code">${SID}</span> · ${peers} conectado${peers===1?"":"s"}${ro}</span>`;
-  if(mode==="off")return `<span class="pill local" title="Sem internet; tentando de novo">Sem conexão</span>`;
-  if(mode==="missing")return `<span class="pill local">Sessão não encontrada</span>`;
-  return `<span class="pill">Conectando…</span>`}
+  const ro=canWrite?"":" · "+t("readOnlyShort");
+  if(mode==="net")return `<span class="pill live" title="${t("sameState")}">${t("session")} <span class="code">${SID}</span> · ${peers} ${t(peers===1?"connected1":"connectedN")}${ro}</span>`;
+  if(mode==="off")return `<span class="pill local" title="${t("offlineTitle")}">${t("offline")}</span>`;
+  if(mode==="missing")return `<span class="pill local">${t("notFound")}</span>`;
+  return `<span class="pill">${t("connecting")}</span>`}
 function header(){
-  return `<header class="top"><div class="brand"><a href="${BASE}" style="text-decoration:none"><small>All Hands</small></a>
-    <input id="showName" class="f" aria-label="Nome do evento" value="${esc(S.show)}" ${canWrite?"":"readonly"}></div>
-    ${tabs()}<div class="meta"><span id="hdrClock">${clock(T(),true)}</span>${syncPill()}</div></header>`}
+  return `<header class="top"><div class="brand"><a href="${BASE}" style="text-decoration:none"><small>Remote Stage Timer</small></a>
+    <input id="showName" class="f" aria-label="${t("eventName")}" value="${esc(S.show)}" ${canWrite?"":"readonly"}></div>
+    ${tabs()}<div class="meta"><span id="hdrClock">${clock(T(),true)}</span>${syncPill()}${langBtn()}</div></header>`}
 
 function renderAll(){
   if(isEditing()){pendingRender=true;return}
   pendingRender=false;
   view=currentView();
   const app=$("#app");
-  if(!CFG.supabaseUrl){app.innerHTML=`<div class="wrap"><div class="home"><h1>Cronômetro All Hands</h1><p class="warn">Falta configurar o banco (config.js).</p></div></div>`;return}
+  if(!CFG.supabaseUrl){app.innerHTML=`<div class="wrap"><div class="home"><h1>Remote Stage Timer</h1><p class="warn">${t("noConfig")}</p></div></div>`;return}
   if(!SID){document.body.classList.remove("stage-mode");app.innerHTML=`<div class="wrap">${homeHTML()}</div>`;bindHome();return}
-  if(mode==="missing"){document.body.classList.remove("stage-mode");app.innerHTML=`<div class="wrap"><div class="home"><h1>Sessão ${esc(SID)} não existe</h1>
-    <p class="lead">Confira o código ou crie uma sessão nova.</p><div><a class="btn primary" href="${BASE}">Voltar ao início</a></div></div></div>`;return}
+  if(mode==="missing"){document.body.classList.remove("stage-mode");app.innerHTML=`<div class="wrap"><div class="home"><h1>${t("missingTitle",{id:esc(SID)})}</h1>
+    <p class="lead">${t("missingLead")}</p><div><a class="btn primary" href="${BASE}">${t("backHome")}</a></div></div></div>`;return}
   document.body.classList.toggle("stage-mode",view==="palco");
   if(view==="palco"){app.innerHTML=stageHTML();bindStage();tick();return}
   let body="";
@@ -410,89 +498,91 @@ function renderAll(){
   bind();tick()}
 function isEditing(){const a=document.activeElement;return a&&a.matches&&a.matches("#app input,#app textarea,#app select")&&a.dataset.live!=="1"}
 
+function langBtn(){return `<button class="btn sm langbtn" data-lang aria-label="${t("switchLang")}" title="${t("switchLang")}">${t("otherLang")}</button>`}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-lang]");if(b)setLang(LANG==="pt"?"en":"pt")});
 function monitorHTML(){
   return `<div class="monitor"><div class="lbl"><span id="mnState">—</span><span id="mnSub"></span></div>
     <div class="tm" id="mnTime">0:00</div><div class="ttl" id="mnTitle"></div><div class="bar"><i id="mnBar"></i></div>
     <div class="msgprev" id="mnMsg"></div></div>`}
 function controlHTML(full){
   const d=!canWrite?"disabled":"";
-  const live=`<section class="card a-live"><h2>No ar</h2>${monitorHTML()}
+  const live=`<section class="card a-live"><h2>${t("onAir")}</h2>${monitorHTML()}
     <div class="ctrls">
-      <button class="btn primary" data-a="toggle" id="btnToggle" ${d}>Iniciar</button>
-      <button class="btn" data-a="prev" ${d}>Anterior</button>
-      <button class="btn" data-a="next" ${d}>Próximo</button>
-      <button class="btn" data-a="finish" ${d}>Encerrar</button>
+      <button class="btn primary" data-a="toggle" id="btnToggle" ${d}>${t("start")}</button>
+      <button class="btn" data-a="prev" ${d}>${t("prev")}</button>
+      <button class="btn" data-a="next" ${d}>${t("next")}</button>
+      <button class="btn" data-a="finish" ${d}>${t("finish")}</button>
       <button class="btn" data-a="minus" ${d}>−1 min</button>
       <button class="btn" data-a="plus" ${d}>+1 min</button>
-      <button class="btn" data-a="reset" ${d}>Zerar</button>
-      <button class="btn ${S.blackout?"on":""}" data-a="blackout" ${d}>Tela preta</button>
+      <button class="btn" data-a="reset" ${d}>${t("reset")}</button>
+      <button class="btn ${S.blackout?"on":""}" data-a="blackout" ${d}>${t("blackout")}</button>
     </div>
-    <p class="note"><kbd>Espaço</kbd> iniciar/pausar · <kbd>→</kbd> próximo · <kbd>←</kbd> anterior · <kbd>F</kbd> piscar · <kbd>B</kbd> tela preta</p>
-    <div class="row extra" style="margin-top:10px"><button class="btn sm ${soundOn?"on":""}" data-a="sound">${soundOn?"Som ligado neste aparelho":"Ligar som neste aparelho"}</button>
-    <a class="btn sm" href="#conectar">Conectar celular</a><a class="btn sm" href="#palco">Abrir palco</a><a class="btn sm" href="#registro">Ver registro</a></div></section>`;
+    <p class="note">${t("keys")}</p>
+    <div class="row extra" style="margin-top:10px"><button class="btn sm ${soundOn?"on":""}" data-a="sound">${soundOn?t("soundOn"):t("soundOff")}</button>
+    <a class="btn sm" href="#${slug("conectar")}">${t("connectPhone")}</a><a class="btn sm" href="#${slug("palco")}">${t("openStage")}</a><a class="btn sm" href="#${slug("registro")}">${t("seeLog")}</a></div></section>`;
   return `<div class="ctl ${full?"":"mod"}">${live}${full?rundownHTML(d):""}${messagesHTML(d)}${questionsHTML(d)}</div>`}
 
 function itemStatus(it){
   const lg=LOGS[it.id];
-  if(S.activeId===it.id&&S.runStartedAt)return `<span class="tag live">${S.running?"no ar":"pausado"}</span>`;
-  if(S.activeId===it.id)return `<span class="tag live">na fila</span>`;
-  if(lg){const delta=lg.elapsedMs-lg.plannedMs;return `<span class="tag done">feito em ${fmtDur(lg.elapsedMs/1000)}</span><span class="tag ${delta>0?"late":"done"}">${fmtDelta(delta)}</span>`}
+  if(S.activeId===it.id&&S.runStartedAt)return `<span class="tag live">${S.running?t("stOnAir"):t("stPaused")}</span>`;
+  if(S.activeId===it.id)return `<span class="tag live">${t("stCued")}</span>`;
+  if(lg){const delta=lg.elapsedMs-lg.plannedMs;return `<span class="tag done">${t("doneIn")} ${fmtDur(lg.elapsedMs/1000)}</span><span class="tag ${delta>0?"late":"done"}">${fmtDelta(delta)}</span>`}
   return ""}
-const MODE_L={down:"Regressivo",up:"Progressivo",tod:"Hora do dia","down+tod":"Regressivo + hora"};
-const TRIG_L={manual:"Manual",linked:"Encadeado",scheduled:"Agendado"};
+const MODE_L={down:t("mDown"),up:t("mUp"),tod:t("mTod"),"down+tod":t("mDownTod")};
+const TRIG_L={manual:t("tManual"),linked:t("tLinked"),scheduled:t("tScheduled")};
 function rundownHTML(d){
   const total=S.items.reduce((a,i)=>a+i.dur,0);
   const rows=S.items.map((it,k)=>`<div class="it ${S.activeId===it.id?"active":""}" data-id="${it.id}">
-    <div class="n">${k+1}</div>
-    <div class="fields"><input class="f" data-f="title" aria-label="Título" value="${esc(it.title)}" ${d}>
-      <input class="f spk" data-f="speaker" aria-label="Quem apresenta" placeholder="Quem apresenta" value="${esc(it.speaker)}" ${d}>
-      <input class="f dur" data-f="dur" aria-label="Duração" value="${fmtDur(it.dur)}" ${d}></div>
-    <div class="acts"><button class="btn sm primary" data-a="play" ${d} title="Iniciar este">${S.activeId===it.id&&S.running?"No ar":"Iniciar"}</button>
-      <button class="btn sm ghost" data-a="up" ${d} aria-label="Subir">↑</button><button class="btn sm ghost" data-a="down" ${d} aria-label="Descer">↓</button></div>
-    <div class="status">${itemStatus(it)}<span>${MODE_L[it.mode]}</span><span>${TRIG_L[it.trigger]}${it.trigger==="scheduled"&&it.at?" às "+esc(it.at):""}</span>${it.notes?`<span>${esc(it.notes)}</span>`:""}</div>
-    <details class="cfg"><summary>Ajustes</summary><div class="cfggrid">
-      <label>Tipo<select class="f" data-f="mode" ${d}>${Object.entries(MODE_L).map(([k,v])=>`<option value="${k}" ${it.mode===k?"selected":""}>${v}</option>`).join("")}</select></label>
-      <label>Início<select class="f" data-f="trigger" ${d}>${Object.entries(TRIG_L).map(([k,v])=>`<option value="${k}" ${it.trigger===k?"selected":""}>${v}</option>`).join("")}</select></label>
-      <label>Horário (agendado)<input class="f" type="time" data-f="at" value="${esc(it.at)}" ${d}></label>
-      <label>Amarelo faltando (s)<input class="f" type="number" min="0" data-f="wrapY" value="${it.wrapY}" ${d}></label>
-      <label>Vermelho faltando (s)<input class="f" type="number" min="0" data-f="wrapR" value="${it.wrapR}" ${d}></label>
-      <label>Notas<input class="f" data-f="notes" value="${esc(it.notes)}" ${d}></label>
-      <label>&nbsp;<button class="btn sm" data-a="cue" ${d}>Deixar na fila</button></label>
-      <label>&nbsp;<button class="btn sm" data-a="del" ${d}>Remover</button></label>
+    <div class="n" data-pre="${t("numPre")}">${k+1}</div>
+    <div class="fields"><input class="f" data-f="title" aria-label="${t("title")}" value="${esc(it.title)}" ${d}>
+      <input class="f spk" data-f="speaker" aria-label="${t("speaker")}" placeholder="${t("speaker")}" value="${esc(it.speaker)}" ${d}>
+      <input class="f dur" data-f="dur" aria-label="${t("duration")}" value="${fmtDur(it.dur)}" ${d}></div>
+    <div class="acts"><button class="btn sm primary" data-a="play" ${d} title="${t("startThis")}">${S.activeId===it.id&&S.running?t("onAir"):t("start")}</button>
+      <button class="btn sm ghost" data-a="up" ${d} aria-label="${t("moveUp")}">↑</button><button class="btn sm ghost" data-a="down" ${d} aria-label="${t("moveDown")}">↓</button></div>
+    <div class="status">${itemStatus(it)}<span>${MODE_L[it.mode]}</span><span>${TRIG_L[it.trigger]}${it.trigger==="scheduled"&&it.at?" "+t("at")+" "+esc(it.at):""}</span>${it.notes?`<span>${esc(it.notes)}</span>`:""}</div>
+    <details class="cfg"><summary>${t("settings")}</summary><div class="cfggrid">
+      <label>${t("type")}<select class="f" data-f="mode" ${d}>${Object.entries(MODE_L).map(([k,v])=>`<option value="${k}" ${it.mode===k?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label>${t("trigger")}<select class="f" data-f="trigger" ${d}>${Object.entries(TRIG_L).map(([k,v])=>`<option value="${k}" ${it.trigger===k?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label>${t("schedAt")}<input class="f" type="time" data-f="at" value="${esc(it.at)}" ${d}></label>
+      <label>${t("yellowAt")}<input class="f" type="number" min="0" data-f="wrapY" value="${it.wrapY}" ${d}></label>
+      <label>${t("redAt")}<input class="f" type="number" min="0" data-f="wrapR" value="${it.wrapR}" ${d}></label>
+      <label>${t("notes")}<input class="f" data-f="notes" value="${esc(it.notes)}" ${d}></label>
+      <label>&nbsp;<button class="btn sm" data-a="cue" ${d}>${t("cue")}</button></label>
+      <label>&nbsp;<button class="btn sm" data-a="del" ${d}>${t("remove")}</button></label>
     </div></details></div>`).join("");
-  const empty=`<div class="empty"><p>A pauta está vazia. Adicione as apresentações do All Hands ou importe um CSV.</p>
-    <button class="btn" data-a="sample" ${d}>Carregar pauta de exemplo</button></div>`;
-  return `<section class="card a-run"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Pauta · ${S.items.length} itens · ${fmtDur(total)}</h2>
-    <button class="btn primary sm" data-a="add" ${d}>Adicionar apresentação</button></div>
+  const empty=`<div class="empty"><p>${t("emptyRundown")}</p>
+    <button class="btn" data-a="sample" ${d}>${t("loadSample")}</button></div>`;
+  return `<section class="card a-run"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">${t("rundown")} · ${S.items.length} ${t("items")} · ${fmtDur(total)}</h2>
+    <button class="btn primary sm" data-a="add" ${d}>${t("addItem")}</button></div>
     <div class="rd">${S.items.length?rows:empty}</div>
-    <details style="margin-top:12px"><summary class="note" style="cursor:pointer">Importar CSV</summary>
-      <p class="note">Uma linha por apresentação: <code>título;quem apresenta;duração;tipo;início;horário</code>. Duração em minutos ou mm:ss. Tipo: regressivo, progressivo, hora, regressivo+hora. Início: manual, encadeado, agendado.</p>
-      <textarea class="f" id="csvIn" rows="4" placeholder="Abertura;Ana;5&#10;Resultados do trimestre;Bruno;12:30;regressivo;encadeado"></textarea>
-      <div class="row" style="margin-top:6px"><button class="btn sm" data-a="import" ${d}>Adicionar à pauta</button><button class="btn sm" data-a="importReplace" ${d}>Substituir a pauta</button></div>
+    <details style="margin-top:12px"><summary class="note" style="cursor:pointer">${t("importCsv")}</summary>
+      <p class="note">${t("csvHelp")}</p>
+      <textarea class="f" id="csvIn" rows="4" placeholder="${esc(t("csvPh")).replace(/\n/g,"&#10;")}"></textarea>
+      <div class="row" style="margin-top:6px"><button class="btn sm" data-a="import" ${d}>${t("addToRundown")}</button><button class="btn sm" data-a="importReplace" ${d}>${t("replaceRundown")}</button></div>
     </details></section>`}
 
 function messagesHTML(d){
   const rows=S.messages.map(m=>`<div class="msg ${S.shownMsgId===m.id?"shown":""}" data-mid="${m.id}">
-    <input class="f" data-m="text" aria-label="Texto da mensagem" value="${esc(m.text)}" ${d}>
-    <div class="row">${Object.keys(COLORS).map(c=>`<button class="swatch ${m.color===c?"sel":""}" style="background:${COLORS[c]}" data-a="mcolor" data-c="${c}" aria-label="Cor ${c}" ${d}></button>`).join("")}
-      <button class="btn sm ${S.shownMsgId===m.id?"on":""}" data-a="mshow" ${d}>${S.shownMsgId===m.id?"Ocultar":"Mostrar"}</button>
-      <button class="btn sm ghost" data-a="mdel" ${d} aria-label="Apagar mensagem">×</button></div></div>`).join("");
-  return `<section class="card a-msg"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Mensagens para o palco</h2>
-    <div class="row"><button class="btn sm" data-a="flash" ${d}>Piscar tela</button><button class="btn sm primary" data-a="madd" ${d}>Nova</button></div></div>
-    <div class="msgs">${rows||`<div class="empty"><p>Nenhuma mensagem. Ex.: "Faltam 2 minutos", "Fale mais perto do microfone".</p></div>`}</div></section>`}
+    <input class="f" data-m="text" aria-label="${t("msgText")}" value="${esc(m.text)}" ${d}>
+    <div class="row">${Object.keys(COLORS).map(c=>`<button class="swatch ${m.color===c?"sel":""}" style="background:${COLORS[c]}" data-a="mcolor" data-c="${c}" aria-label="${t("color")} ${t("colors")[c]}" ${d}></button>`).join("")}
+      <button class="btn sm ${S.shownMsgId===m.id?"on":""}" data-a="mshow" ${d}>${S.shownMsgId===m.id?t("hide"):t("show")}</button>
+      <button class="btn sm ghost" data-a="mdel" ${d} aria-label="${t("delMsg")}">×</button></div></div>`).join("");
+  return `<section class="card a-msg"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">${t("messages")}</h2>
+    <div class="row"><button class="btn sm" data-a="flash" ${d}>${t("flash")}</button><button class="btn sm primary" data-a="madd" ${d}>${t("newMsg")}</button></div></div>
+    <div class="msgs">${rows||`<div class="empty"><p>${esc(t("emptyMsgs"))}</p></div>`}</div></section>`}
 
 function questionsHTML(d){
-  if(mode!=="net"&&!QS.length)return `<section class="card a-q"><h2>Perguntas da plateia</h2><p class="note">Conectando…</p></section>`;
-  const rows=QS.map(q=>`<div class="q" data-qid="${q.id}"><div>${esc(q.text)}</div><small>${esc(q.name||"Anônimo")} · ${clock(q.at,false)}</small>
-    <div class="row"><button class="btn sm" data-a="qmsg" ${d}>Virar mensagem</button><button class="btn sm ghost" data-a="qdel" ${d}>Dispensar</button></div></div>`).join("");
-  return `<section class="card a-q"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Perguntas da plateia · ${QS.length}</h2><a class="btn sm" href="#conectar">QR das perguntas</a></div>
-    <div class="stack" style="gap:10px">${rows||`<p class="note" style="margin:0">Mostre o QR das perguntas para o pessoal. O que chegar aparece aqui.</p>`}</div></section>`}
+  if(mode!=="net"&&!QS.length)return `<section class="card a-q"><h2>${t("questions")}</h2><p class="note">${t("connecting")}</p></section>`;
+  const rows=QS.map(q=>`<div class="q" data-qid="${q.id}"><div>${esc(q.text)}</div><small>${esc(q.name||t("anon"))} · ${clock(q.at,false)}</small>
+    <div class="row"><button class="btn sm" data-a="qmsg" ${d}>${t("toMessage")}</button><button class="btn sm ghost" data-a="qdel" ${d}>${t("dismiss")}</button></div></div>`).join("");
+  return `<section class="card a-q"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">${t("questions")} · ${QS.length}</h2><a class="btn sm" href="#${slug("conectar")}">${t("questionsQr")}</a></div>
+    <div class="stack" style="gap:10px">${rows||`<p class="note" style="margin:0">${t("emptyQs")}</p>`}</div></section>`}
 
 function stageHTML(){
   return `<div id="stage"><div class="stage-head"><div><div class="stage-title" id="stTitle"></div><div class="stage-spk" id="stSpk"></div></div><div class="stage-clock" id="stClock"></div></div>
     <div class="stage-body"><div class="stage-time" id="stTime">0:00</div><div class="stage-sub" id="stSub"></div><div class="stage-msg" id="stMsg" hidden></div></div>
     <div class="stage-foot"><div class="bar"><i id="stBar"></i></div><div class="stage-next"><span id="stNext"></span><span id="stShow"></span></div></div>
-    <div class="stage-tools"><button id="stFull">Tela cheia</button><button id="stSound">${soundOn?"Som ligado":"Ligar som"}</button>${canWrite?`<button onclick="location.hash='conectar'">Conectar celular</button><button onclick="location.hash='controle'">Controle</button>`:""}</div></div>`}
+    <div class="stage-tools"><button id="stFull">${t("fullscreen")}</button><button id="stSound">${soundOn?t("soundOnShort"):t("soundOffShort")}</button><button data-lang>${t("otherLang")}</button>${canWrite?`<button onclick="location.hash='${slug("conectar")}'">${t("connectPhone")}</button><button onclick="location.hash='${slug("controle")}'">${t("control")}</button>`:""}</div></div>`}
 
 function agendaHTML(){
   let t=null;const rows=S.items.map((it,k)=>{
@@ -503,9 +593,9 @@ function agendaHTML(){
     else{const sch=it.trigger==="scheduled"?atToday(it.at):null;when=sch||(t??null);if(when!=null)t=when+it.dur*1000}
     const st=isNow?"now":lg?"past":"";
     return `<div class="ag-row ${st}"><span class="t">${when?clock(when,false):"—"}</span><div><div class="tt">${esc(it.title)}</div><div class="sp">${esc(it.speaker)}</div></div>
-      <span class="t">${isNow?"<b>agora</b>":lg?fmtDur(lg.elapsedMs/1000):fmtDur(it.dur)}</span></div>`}).join("");
-  return `<section class="card"><h2>Agenda · ${esc(S.show)}</h2><div class="ag">${rows||`<div class="empty"><p>A pauta ainda não foi montada.</p></div>`}</div>
-    <p class="note">Horários previstos contam a partir do que já começou. Itens agendados usam o horário marcado.</p></section>`}
+      <span class="t">${isNow?`<b>${t("now")}</b>`:lg?fmtDur(lg.elapsedMs/1000):fmtDur(it.dur)}</span></div>`}).join("");
+  return `<section class="card"><h2>${t("agenda")} · ${esc(S.show)}</h2><div class="ag">${rows||`<div class="empty"><p>${t("emptyAgenda")}</p></div>`}</div>
+    <p class="note">${t("agendaNote")}</p></section>`}
 
 function logRows(){
   const order=S.items.map(i=>i.id);
@@ -518,67 +608,67 @@ function logHTML(){
   const first=rows.length?Math.min(...rows.map(r=>r.startedAt)):null,last=rows.length?Math.max(...rows.map(r=>r.endedAt)):null;
   const tr=rows.map(r=>{const dl=r.elapsedMs-r.plannedMs;return `<tr><td>${esc(r.title)}</td><td>${esc(r.speaker)}</td><td class="num">${fmtDur(r.plannedMs/1000)}</td><td class="num">${fmtDur(r.elapsedMs/1000)}</td>
     <td class="num ${dl>0?"plus":"minus"}">${fmtDelta(dl)}</td><td class="num">${clock(r.startedAt,true)}</td><td class="num">${clock(r.endedAt,true)}</td><td class="num">${r.pausedMs>999?fmtDur(r.pausedMs/1000):"—"}</td>
-    <td>${canWrite?`<button class="btn sm ghost" data-a="ldel" data-lid="${esc(r.itemId)}">Apagar</button>`:""}</td></tr>`}).join("");
-  const liveRow=L&&L.started?`<tr><td>${esc(L.it.title)} <span class="tag live">no ar</span></td><td>${esc(L.it.speaker)}</td><td class="num">${fmtDur(L.total/1000)}</td><td class="num" id="lgLive">${fmtDur(L.elapsed/1000)}</td><td></td><td class="num">${clock(S.runStartedAt,true)}</td><td></td><td></td><td></td></tr>`:"";
+    <td>${canWrite?`<button class="btn sm ghost" data-a="ldel" data-lid="${esc(r.itemId)}">${t("del")}</button>`:""}</td></tr>`}).join("");
+  const liveRow=L&&L.started?`<tr><td>${esc(L.it.title)} <span class="tag live">${t("stOnAir")}</span></td><td>${esc(L.it.speaker)}</td><td class="num">${fmtDur(L.total/1000)}</td><td class="num" id="lgLive">${fmtDur(L.elapsed/1000)}</td><td></td><td class="num">${clock(S.runStartedAt,true)}</td><td></td><td></td><td></td></tr>`:"";
   const dl=actual-planned;
-  return `<section class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Registro de tempos</h2>
-      <div class="row"><button class="btn sm" data-a="csvCopy">Copiar CSV</button><button class="btn sm" data-a="csvSave">Baixar CSV</button>
-      ${canWrite&&rows.length?`<button class="btn sm ghost" data-a="lclear" id="lclear">Limpar registro</button>`:""}</div></div>
-    <div class="kpis"><div class="kpi"><b>${rows.length}/${S.items.length}</b><span>apresentações feitas</span></div>
-      <div class="kpi"><b>${fmtDur(actual/1000)}</b><span>tempo real somado (previsto ${fmtDur(planned/1000)})</span></div>
-      <div class="kpi"><b style="color:${dl>0?"var(--bad)":"var(--ok)"}">${fmtDelta(dl)}</b><span>diferença total</span></div>
-      <div class="kpi"><b>${late}</b><span>estouraram o tempo</span></div>
-      <div class="kpi"><b>${first?clock(first,false)+"–"+clock(last,false):"—"}</b><span>do início ao fim</span></div></div>
-    <div class="tbl"><table><thead><tr><th>Apresentação</th><th>Quem</th><th class="num">Previsto</th><th class="num">Real</th><th class="num">Diferença</th><th class="num">Início</th><th class="num">Fim</th><th class="num">Pausas</th><th></th></tr></thead>
-      <tbody>${tr}${liveRow}${!tr&&!liveRow?`<tr><td colspan="9" style="color:var(--muted)">Nada registrado ainda. Cada apresentação entra aqui quando você clica em Próximo ou Encerrar.</td></tr>`:""}</tbody></table></div>
-    <p class="note">O tempo real desconta as pausas. A diferença compara com a duração prevista na pauta (os +1 min dados no ar contam como estouro).</p></section>`}
+  return `<section class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">${t("log")}</h2>
+      <div class="row"><button class="btn sm" data-a="csvCopy">${t("copyCsv")}</button><button class="btn sm" data-a="csvSave">${t("saveCsv")}</button>
+      ${canWrite&&rows.length?`<button class="btn sm ghost" data-a="lclear" id="lclear">${t("clearLog")}</button>`:""}</div></div>
+    <div class="kpis"><div class="kpi"><b>${rows.length}/${S.items.length}</b><span>${t("kDone")}</span></div>
+      <div class="kpi"><b>${fmtDur(actual/1000)}</b><span>${t("kActual",{p:fmtDur(planned/1000)})}</span></div>
+      <div class="kpi"><b style="color:${dl>0?"var(--bad)":"var(--ok)"}">${fmtDelta(dl)}</b><span>${t("kDelta")}</span></div>
+      <div class="kpi"><b>${late}</b><span>${t("kLate")}</span></div>
+      <div class="kpi"><b>${first?clock(first,false)+"–"+clock(last,false):"—"}</b><span>${t("kSpan")}</span></div></div>
+    <div class="tbl"><table><thead><tr><th>${t("hItem")}</th><th>${t("hWho")}</th><th class="num">${t("hPlanned")}</th><th class="num">${t("hActual")}</th><th class="num">${t("hDelta")}</th><th class="num">${t("hStart")}</th><th class="num">${t("hEnd")}</th><th class="num">${t("hPauses")}</th><th></th></tr></thead>
+      <tbody>${tr}${liveRow}${!tr&&!liveRow?`<tr><td colspan="9" style="color:var(--muted)">${t("emptyLog")}</td></tr>`:""}</tbody></table></div>
+    <p class="note">${t("logNote")}</p></section>`}
 function csv(){
   const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
-  const lines=[["apresentacao","quem","previsto","real","diferenca","inicio","fim","pausas"].join(",")];
+  const lines=[t("csvHead")];
   logRows().forEach(r=>lines.push([q(r.title),q(r.speaker),fmtDur(r.plannedMs/1000),fmtDur(r.elapsedMs/1000),fmtDelta(r.elapsedMs-r.plannedMs),
-    new Date(r.startedAt).toLocaleString("pt-BR"),new Date(r.endedAt).toLocaleString("pt-BR"),fmtDur(r.pausedMs/1000)].map(x=>/^"/.test(x)?x:q(x)).join(",")));
+    new Date(r.startedAt).toLocaleString(LOCALE),new Date(r.endedAt).toLocaleString(LOCALE),fmtDur(r.pausedMs/1000)].map(x=>/^"/.test(x)?x:q(x)).join(",")));
   return lines.join("\n")}
 
 function askHTML(){
-  return `<div class="ask"><h1>Pergunta para o All Hands</h1><p class="note" style="font-size:14px">Escreva sua pergunta. Quem conduz vê na hora e pode mostrar no telão.</p>
+  return `<div class="ask"><div class="row" style="justify-content:space-between;align-items:flex-start"><h1>${t("askTitle")}</h1>${langBtn()}</div><p class="note" style="font-size:14px">${t("askLead")}</p>
     ${SID?`<form id="askForm" class="stack" style="gap:10px;margin-top:16px">
-      <textarea class="f" id="askText" rows="4" maxlength="400" required placeholder="Sua pergunta"></textarea>
-      <input class="f" id="askName" maxlength="60" placeholder="Seu nome (opcional)">
-      <div class="row"><button class="btn primary" type="submit">Enviar pergunta</button><a class="btn ghost" href="#agenda">Ver agenda</a></div></form>`
-      :`<p class="note">Abra pelo QR ou link da sessão.</p>`}</div>`}
+      <textarea class="f" id="askText" rows="4" maxlength="400" required placeholder="${t("askPh")}"></textarea>
+      <input class="f" id="askName" maxlength="60" placeholder="${t("namePh")}">
+      <div class="row"><button class="btn primary" type="submit">${t("send")}</button><a class="btn ghost" href="#${slug("agenda")}">${t("seeAgenda")}</a></div></form>`
+      :`<p class="note">${t("askNoSession")}</p>`}</div>`}
 
 function qrSVG(text){try{const q=qrcode(0,"M");q.addData(text);q.make();return q.createSvgTag({cellSize:6,margin:2,scalable:true})}catch(e){return ""}}
 function connectHTML(){
-  const shown=v=>BASE.replace(/^https?:\/\//,"")+"?s="+SID+"#"+v;
+  const shown=v=>BASE.replace(/^https?:\/\//,"")+"?s="+SID+"#"+slug(v);
   const row=(label,v,desc)=>`<div class="share-row"><div class="qr sm">${qrSVG(linkFor(v,false))}</div>
     <div class="share-txt"><b>${label}</b><span class="note" style="margin:0">${desc}</span><span class="linkbox">${esc(shown(v))}</span>
-    <div><button class="btn sm" data-a="copy" data-link="${esc(linkFor(v,false))}">Copiar link</button></div></div></div>`;
-  const hero=canWrite?`<section class="card"><h2>Controle pelo celular</h2>
+    <div><button class="btn sm" data-a="copy" data-link="${esc(linkFor(v,false))}">${t("copyLink")}</button></div></div></div>`;
+  const hero=canWrite?`<section class="card"><h2>${t("phoneControl")}</h2>
     <div class="hero-body"><div class="qr lg">${qrSVG(linkFor("controle",true))}</div>
-      <ol class="steps"><li>Abra a câmera do celular de quem vai rodar os tempos.</li><li>Aponte para o QR e toque no link que aparecer.</li><li>Quando o celular conectar, esta tela vai sozinha para o palco.</li></ol></div>
-    <p class="warn" style="margin:0 0 12px">Este QR dá controle total da sessão. Não mostre no telão.</p>
-    <div class="row"><a class="btn primary" href="#palco">Abrir palco neste aparelho</a><button class="btn" data-a="copy" data-link="${esc(linkFor("controle",true))}">Copiar link de controle</button></div></section>`:"";
+      <ol class="steps"><li>${t("step1")}</li><li>${t("step2")}</li><li>${t("step3")}</li></ol></div>
+    <p class="warn" style="margin:0 0 12px">${t("qrWarn")}</p>
+    <div class="row"><a class="btn primary" href="#${slug("palco")}">${t("openStageHere")}</a><button class="btn" data-a="copy" data-link="${esc(linkFor("controle",true))}">${t("copyCtl")}</button></div></section>`:"";
   return `<div class="share ${canWrite?"":"solo"}">${hero}<section class="card"><div class="row" style="justify-content:space-between;margin-bottom:8px">
-      <h2 style="margin:0">Sessão <span class="code">${SID}</span></h2>${canWrite?"":`<a class="btn sm" href="#palco">Abrir palco</a>`}</div>
-    ${row("Perguntas da plateia","perguntas","Pode ir para o telão: só envia perguntas.")}
-    ${row("Agenda","agenda","Só leitura: pauta, o que está no ar e o que vem depois.")}
-    ${canWrite?row("Palco em outro aparelho","palco","Só leitura: o timer em tela cheia num segundo notebook ou TV."):""}</section></div>`}
+      <h2 style="margin:0">${t("session")} <span class="code">${SID}</span></h2>${canWrite?"":`<a class="btn sm" href="#${slug("palco")}">${t("openStage")}</a>`}</div>
+    ${row(t("rowQs"),"perguntas",t("rowQsD"))}
+    ${row(t("rowAg"),"agenda",t("rowAgD"))}
+    ${canWrite?row(t("rowSt"),"palco",t("rowStD")):""}</section></div>`}
 
 function homeHTML(){
   const mine=Object.entries(lsGet("ah-sessions",{})).sort((a,b)=>b[1].at-a[1].at).slice(0,8);
-  return `<div class="home"><div><h1>Cronômetro All Hands</h1></div>
-    <p class="lead">Crie uma sessão neste notebook, escaneie o QR com o celular e controle os tempos do palco pelo celular. Cada apresentação fica registrada com o tempo real.</p>
-    <div class="row"><button class="btn primary" id="btnCreate">Criar sessão</button></div>
-    <section class="card"><h2>Entrar numa sessão</h2><form class="join" id="joinForm"><input class="f" id="joinCode" maxlength="8" placeholder="CÓDIGO" aria-label="Código da sessão" autocomplete="off"><button class="btn" type="submit">Entrar</button></form>
-      <p class="note">Com o código você vê agenda e palco e manda perguntas. Para controlar, use o QR de controle.</p></section>
-    ${mine.length?`<section class="card"><h2>Sessões criadas neste aparelho</h2><div class="mine">${mine.map(([id,m])=>`<a href="${BASE}?s=${id}#controle"><span>${esc(m.show||"All Hands")}</span><span>${id} · ${new Date(m.at).toLocaleDateString("pt-BR")}</span></a>`).join("")}</div></section>`:""}
+  return `<div class="home"><div class="row" style="justify-content:space-between;align-items:flex-start"><h1>Remote Stage Timer</h1>${langBtn()}</div>
+    <p class="lead">${t("homeLead")}</p>
+    <div class="row"><button class="btn primary" id="btnCreate">${t("create")}</button></div>
+    <section class="card"><h2>${t("join")}</h2><form class="join" id="joinForm"><input class="f" id="joinCode" maxlength="8" placeholder="${t("codePh")}" aria-label="${t("codeAria")}" autocomplete="off"><button class="btn" type="submit">${t("enter")}</button></form>
+      <p class="note">${t("joinNote")}</p></section>
+    ${mine.length?`<section class="card"><h2>${t("mine")}</h2><div class="mine">${mine.map(([id,m])=>`<a href="${BASE}?s=${id}#${slug("controle")}"><span>${esc(m.show||t("defaultShow"))}</span><span>${id} · ${new Date(m.at).toLocaleDateString(LOCALE)}</span></a>`).join("")}</div></section>`:""}
   </div>`}
 function bindHome(){
-  $("#btnCreate").onclick=async e=>{e.target.disabled=true;e.target.textContent="Criando…";
-    try{const r=await rpc("create_session",{});lsSet("ah-key-"+r.id,r.key);const all=lsGet("ah-sessions",{});all[r.id]={show:"All Hands",at:Date.now()};lsSet("ah-sessions",all);
-      location.href=BASE+"?s="+r.id+"#conectar"}
-    catch(err){e.target.disabled=false;e.target.textContent="Criar sessão";toast("Não consegui criar a sessão. Confira a internet.")}};
-  $("#joinForm").onsubmit=e=>{e.preventDefault();const c=$("#joinCode").value.toUpperCase().replace(/[^A-Z0-9]/g,"");if(c)location.href=BASE+"?s="+c+"#agenda"}}
+  $("#btnCreate").onclick=async e=>{e.target.disabled=true;e.target.textContent=t("creating");
+    try{const r=await rpc("create_session",{});lsSet("ah-key-"+r.id,r.key);const all=lsGet("ah-sessions",{});all[r.id]={show:t("defaultShow"),at:Date.now()};lsSet("ah-sessions",all);
+      location.href=BASE+"?s="+r.id+"#"+slug("conectar")}
+    catch(err){e.target.disabled=false;e.target.textContent=t("create");toast(t("createFail"))}};
+  $("#joinForm").onsubmit=e=>{e.preventDefault();const c=$("#joinCode").value.toUpperCase().replace(/[^A-Z0-9]/g,"");if(c)location.href=BASE+"?s="+c+"#"+slug("agenda")}}
 
 /* ---------- tick ---------- */
 function tick(){
@@ -597,7 +687,7 @@ function tick(){
     $("#stClock").textContent=clock(now,false);$("#stShow").textContent=S.show;
     const t=$("#stTime"),sub=$("#stSub"),bar=$("#stBar");
     if(L){t.textContent=L.main;t.className="stage-time "+(L.it.mode==="tod"?"":L.phase);sub.textContent=L.sub;$("#stTitle").textContent=L.it.title;$("#stSpk").textContent=L.it.speaker;
-      bar.style.width=(L.progress*100)+"%";bar.className=L.phase;const n=S.items[idx(L.it.id)+1];$("#stNext").textContent=n?"A seguir: "+n.title:""}
+      bar.style.width=(L.progress*100)+"%";bar.className=L.phase;const n=S.items[idx(L.it.id)+1];$("#stNext").textContent=n?t("upNext")+n.title:""}
     else{t.textContent=clock(now,false);t.className="stage-time";sub.textContent="";$("#stTitle").textContent=S.show;$("#stSpk").textContent="";bar.style.width="0";$("#stNext").textContent=""}
     const m=$("#stMsg");
     if(msg&&msg.text){m.hidden=false;if(m.textContent!==msg.text)m.textContent=msg.text;m.style.color=COLORS[msg.color]||COLORS.white;
@@ -609,15 +699,15 @@ function tick(){
   if(mt){
     if(L){mt.textContent=L.main;mt.className="tm "+(L.it.mode==="tod"?"":L.phase);$("#mnTitle").textContent=L.it.title+(L.it.speaker?" · "+L.it.speaker:"");
       $("#mnBar").style.width=(L.progress*100)+"%";$("#mnBar").className=L.phase;
-      $("#mnState").textContent=L.started?(S.running?(L.remaining<0?"Estourado":"No ar"):"Pausado"):"Na fila";$("#mnSub").textContent=L.sub||("termina "+(S.running?clock(now+L.remaining,false):"—"))}
-    else{mt.textContent="0:00";mt.className="tm";$("#mnTitle").textContent=S.items.length?"Escolha uma apresentação na pauta":"";$("#mnBar").style.width="0";$("#mnState").textContent="Parado";$("#mnSub").textContent=""}
-    $("#mnMsg").textContent=(S.blackout?"Palco em tela preta. ":"")+(msg&&msg.text?"Mensagem no palco: "+msg.text:"");
-    const b=$("#btnToggle");if(b)b.textContent=S.running?"Pausar":(L&&L.started?"Continuar":"Iniciar")}
+      $("#mnState").textContent=L.started?(S.running?(L.remaining<0?t("over"):t("onAir")):t("paused")):t("cued");$("#mnSub").textContent=L.sub||(t("ends")+" "+(S.running?clock(now+L.remaining,false):"—"))}
+    else{mt.textContent="0:00";mt.className="tm";$("#mnTitle").textContent=S.items.length?t("pick"):"";$("#mnBar").style.width="0";$("#mnState").textContent=t("stopped");$("#mnSub").textContent=""}
+    $("#mnMsg").textContent=(S.blackout?t("blackoutOn"):"")+(msg&&msg.text?t("msgOn")+msg.text:"");
+    const b=$("#btnToggle");if(b)b.textContent=S.running?t("pause"):(L&&L.started?t("resume"):t("start"))}
   const lgl=$("#lgLive");if(lgl&&L)lgl.textContent=fmtDur(L.elapsed/1000)}
 
 /* ---------- eventos ---------- */
 function bind(){
-  const sn=$("#showName");if(sn)sn.addEventListener("change",()=>{if(guard()){S.show=sn.value.trim()||"All Hands";save()}});
+  const sn=$("#showName");if(sn)sn.addEventListener("change",()=>{if(guard()){S.show=sn.value.trim()||t("defaultShow");save()}});
   const app=$("#app");
   app.onclick=e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
     const row=b.closest("[data-id]"),id=row&&row.dataset.id,mrow=b.closest("[data-mid]"),mid=mrow&&mrow.dataset.mid,qrow=b.closest("[data-qid]"),qid=qrow&&qrow.dataset.qid;
@@ -634,7 +724,7 @@ function bind(){
       case"copy":copyText(b.dataset.link);break;
       case"csvCopy":copyCsv();break;case"csvSave":saveCsv();break;
       case"ldel":dropLog(b.dataset.lid);renderAll();break;
-      case"lclear":if(b.dataset.armed){Object.keys(LOGS).forEach(dropLog);renderAll()}else{b.dataset.armed="1";b.textContent="Clique de novo para apagar tudo";b.classList.add("on")}break;
+      case"lclear":if(b.dataset.armed){Object.keys(LOGS).forEach(dropLog);renderAll()}else{b.dataset.armed="1";b.textContent=t("confirmClear");b.classList.add("on")}break;
     }};
   app.onchange=e=>{const el=e.target;
     if(el.dataset.f){const id=el.closest("[data-id]").dataset.id;const f=el.dataset.f;let v=el.value;
@@ -643,12 +733,12 @@ function bind(){
     else if(el.dataset.m){updMsg(el.closest("[data-mid]").dataset.mid,{text:el.value})}};
   app.addEventListener("focusout",()=>setTimeout(()=>{if(pendingRender&&!isEditing())renderAll()},0));
   const f=$("#askForm");if(f)f.addEventListener("submit",async e=>{e.preventDefault();const text=$("#askText").value.trim();if(!text)return;
-    try{await rpc("add_question",{p_id:SID,p_text:text,p_name:$("#askName").value.trim()});ping();$("#askText").value="";toast("Pergunta enviada.")}
-    catch(err){toast("Não consegui enviar. Tente de novo.")}})}
+    try{await rpc("add_question",{p_id:SID,p_text:text,p_name:$("#askName").value.trim()});ping();$("#askText").value="";toast(t("qSent"))}
+    catch(err){toast(t("qFail"))}})}
 function bindStage(){
-  $("#stFull").onclick=async()=>{try{await document.documentElement.requestFullscreen()}catch(e){toast("Tela cheia não está disponível aqui.")}
+  $("#stFull").onclick=async()=>{try{await document.documentElement.requestFullscreen()}catch(e){toast(t("noFullscreen"))}
     try{await navigator.wakeLock.request("screen")}catch(e){}};
-  $("#stSound").onclick=()=>{ensureAudio();$("#stSound").textContent=soundOn?"Som ligado":"Ligar som"};
+  $("#stSound").onclick=()=>{ensureAudio();$("#stSound").textContent=soundOn?t("soundOnShort"):t("soundOffShort")};
   const st=$("#stage");let idleT;const wake=()=>{st.classList.remove("idle");clearTimeout(idleT);idleT=setTimeout(()=>st.classList.add("idle"),2500)};
   st.addEventListener("mousemove",wake);wake()}
 document.addEventListener("keydown",e=>{
@@ -658,24 +748,22 @@ document.addEventListener("keydown",e=>{
   if(k===" "){e.preventDefault();toggle()}else if(k==="arrowright")next();else if(k==="arrowleft")prev();else if(k==="f")flash();else if(k==="b")blackout()});
 window.addEventListener("hashchange",()=>{renderAll();announce()});
 
-async function copyText(t){try{await navigator.clipboard.writeText(t);toast("Link copiado.")}catch(e){toast("Não deu para copiar. Segure o link para copiar.")}}
+async function copyText(t){try{await navigator.clipboard.writeText(t);toast(t("linkCopied"))}catch(e){toast(t("copyFail"))}}
 function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>el.hidden=true,2600)}
-async function copyCsv(){const t=csv();try{await navigator.clipboard.writeText(t);toast("CSV copiado.")}catch(e){
-  const ta=document.createElement("textarea");ta.value=t;ta.className="f";ta.rows=6;$("#app .card").append(ta);ta.select();toast("Selecionei o CSV abaixo. Copie com Ctrl+C.")}}
-function saveCsv(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv()],{type:"text/csv"}));a.download=`all-hands-tempos-${todayKey()}.csv`;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+async function copyCsv(){const t=csv();try{await navigator.clipboard.writeText(t);toast(t("csvCopied"))}catch(e){
+  const ta=document.createElement("textarea");ta.value=t;ta.className="f";ta.rows=6;$("#app .card").append(ta);ta.select();toast(t("csvSelected"))}}
+function saveCsv(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv()],{type:"text/csv"}));a.download=`${t("csvFile")}-${todayKey()}.csv`;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 function importCsv(replace){
   if(!guard())return;const txt=($("#csvIn")||{}).value||"";
-  const mm={regressivo:"down",progressivo:"up",hora:"tod","regressivo+hora":"down+tod"},tm={manual:"manual",encadeado:"linked",agendado:"scheduled"};
+  const mm={regressivo:"down",progressivo:"up",hora:"tod","regressivo+hora":"down+tod",countdown:"down",countup:"up",time:"tod","countdown+time":"down+tod"},tm={manual:"manual",encadeado:"linked",agendado:"scheduled",linked:"linked",scheduled:"scheduled"};
   const items=txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.split(l.includes(";")?";":",").map(s=>s.trim());
-    return defaultItem({title:p[0]||"Sem título",speaker:p[1]||"",dur:parseDur(p[2]||"5")||300,mode:mm[(p[3]||"").toLowerCase()]||"down",trigger:tm[(p[4]||"").toLowerCase()]||"manual",at:p[5]||""})});
-  if(!items.length){toast("Cole ao menos uma linha.");return}
-  if(replace){resetTimer();S.activeId=null;S.items=items}else S.items.push(...items);save();toast(`${items.length} itens na pauta.`)}
+    return defaultItem({title:p[0]||t("untitled"),speaker:p[1]||"",dur:parseDur(p[2]||"5")||300,mode:mm[(p[3]||"").toLowerCase()]||"down",trigger:tm[(p[4]||"").toLowerCase()]||"manual",at:p[5]||""})});
+  if(!items.length){toast(t("pasteOne"));return}
+  if(replace){resetTimer();S.activeId=null;S.items=items}else S.items.push(...items);save();toast(t("nItems",{n:items.length}))}
 function loadSample(){
   if(!guard())return;
-  S.items=[["Abertura e avisos","Exemplo: Liderança",5],["Resultados do trimestre","Exemplo: Financeiro",12],["Engenharia: o que entregamos","Exemplo: Engenharia",10],
-    ["Novidades dos jogos","Exemplo: Produto",10],["Reconhecimentos","Exemplo: Pessoas",6],["Perguntas e respostas","Exemplo: Todos",15]]
-    .map(([t,s,m],k)=>defaultItem({title:t,speaker:s,dur:m*60,trigger:"manual"}));
-  S.messages=[{id:uid(),text:"Faltam 2 minutos",color:"yellow"},{id:uid(),text:"Encerre, por favor",color:"red"},{id:uid(),text:"Fale mais perto do microfone",color:"white"}];
+  S.items=t("sample").map(([title,speaker,m])=>defaultItem({title,speaker,dur:m*60,trigger:"manual"}));
+  S.messages=t("sampleMsgs").map(([text,color])=>({id:uid(),text,color}));
   save()}
 
 /* ---------- boot ---------- */
@@ -696,7 +784,7 @@ function onPresence(){
   const st=chan.presenceState();const list=Object.values(st).flat();peers=list.length;
   const ctl=list.some(p=>p.ctl);
   // o celular escaneou o QR: o notebook que mostra o QR vai sozinho para o palco
-  if(ctl&&!ctlSeen&&currentView()==="conectar"&&canWrite){ctlSeen=true;toast("Celular conectado. Abrindo o palco.");setTimeout(()=>{location.hash="palco"},1200)}
+  if(ctl&&!ctlSeen&&currentView()==="conectar"&&canWrite){ctlSeen=true;toast(t("phoneIn"));setTimeout(()=>{location.hash=slug("palco")},1200)}
   ctlSeen=ctlSeen||ctl;
   const pl=document.querySelector(".pill");if(pl&&!isEditing())renderAll()}
 setInterval(tick,200);
@@ -705,7 +793,7 @@ setInterval(tick,200);
   sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey,{auth:{persistSession:false}});
   if(!SID){renderAll();return}
   if(KEY){try{canWrite=!!(await rpc("check_key",{p_id:SID,p_key:KEY}))}catch(e){canWrite=false}}
-  if(!location.hash)history.replaceState(null,"",BASE+"?s="+SID+"#"+(canWrite?"controle":"agenda"));
+  if(!location.hash)history.replaceState(null,"",BASE+"?s="+SID+"#"+slug(canWrite?"controle":"agenda"));
   renderAll();
   await syncClock();await refresh();
   chan=sb.channel("sessao-"+SID,{config:{broadcast:{self:false},presence:{key:Math.random().toString(36).slice(2)}}});

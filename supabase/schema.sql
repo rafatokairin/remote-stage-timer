@@ -1,4 +1,4 @@
--- Cronômetro All Hands: sessões, chave de controle e registro de tempos.
+-- Remote Stage Timer: sessões, chave de controle e registro de tempos.
 -- Ninguém lê nem escreve as tabelas direto; tudo passa pelas funções abaixo.
 -- Quem tem só o código da sessão lê e manda pergunta; quem tem a chave (QR) controla.
 
