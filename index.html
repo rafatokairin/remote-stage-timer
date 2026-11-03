@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cronômetro All Hands</title>
+<meta name="description" content="Cronômetro de palco do All Hands: pauta, palco em tela cheia, controle pelo celular via QR e registro dos tempos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: régua de controle (rundown) à direita, monitor "no ar" à esquerda; palco é uma tela preta própria */
+:root{
+  --bg:#eef0f3; --panel:#ffffff; --line:#d7dbe2; --fg:#1b1f27; --muted:#5e6675;
+  --accent:#d9481c; --accent-fg:#ffffff; --soft:#f6e7e1;
+  --ok:#1f8a4c; --warn:#b07800; --bad:#c62828;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --stage-bg:#000; --stage-fg:#f4f4f4; --stage-dim:#8a8f99; --stage-y:#f5b700; --stage-r:#ff3b30;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#13161c; --panel:#1b1f27; --line:#2c323d; --fg:#e7e9ee; --muted:#9aa2b1;
+  --accent:#ff7043; --accent-fg:#1a0d07; --soft:#3a231b;
+  --ok:#4cc27e; --warn:#e3a92b; --bad:#ff6b5e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13161c; --panel:#1b1f27; --line:#2c323d; --fg:#e7e9ee; --muted:#9aa2b1;
+  --accent:#ff7043; --accent-fg:#1a0d07; --soft:#3a231b;
+  --ok:#4cc27e; --warn:#e3a92b; --bad:#ff6b5e; color-scheme:dark}
+html,body{height:100%}
+body{margin:0}[hidden]{display:none!important}img{max-width:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.45}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 32px;max-width:1320px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding-block:10px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.brand{display:flex;align-items:baseline;gap:8px;min-width:0;flex:1 1 220px}
+.brand small{font-family:var(--display);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-size:13px}
+#showName{font-family:var(--display);font-weight:700;font-size:26px;border:1px solid transparent;background:transparent;border-radius:6px;padding:0 6px;min-width:0;width:100%}
+#showName:hover,#showName:focus{border-color:var(--line);background:var(--panel)}
+nav.tabs{display:flex;flex-wrap:wrap;gap:4px}
+nav.tabs a{padding:6px 10px;border-radius:6px;text-decoration:none;color:var(--muted);font-weight:500}
+nav.tabs a[aria-current="page"]{background:var(--fg);color:var(--bg)}
+.meta{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);font-family:var(--body);font-size:12px;white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.pill.live::before{background:var(--ok)}
+.pill.local::before{background:var(--warn)}
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.ctl{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);grid-template-rows:auto auto 1fr;grid-template-areas:"live run" "msg run" "q run";gap:16px;align-items:start}
+.a-live{grid-area:live}.a-run{grid-area:run}.a-msg{grid-area:msg}.a-q{grid-area:q}
+.ctl.mod{grid-template-rows:auto 1fr;grid-template-areas:"live q" "msg q"}
+button,a{touch-action:manipulation}
+@media (max-width:900px){
+  .ctl,.ctl.mod{grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-template-areas:"live" "run" "msg" "q"}
+  .ctl.mod{grid-template-areas:"live" "msg" "q"}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+  .a-live{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;padding:10px;box-shadow:0 6px 16px -10px rgba(0,0,0,.45)}
+  .a-live h2,.a-live .note,.a-live .extra{display:none}
+  .monitor{padding:10px 12px;gap:4px}
+  .monitor .tm{font-size:clamp(52px,17vw,84px)}
+  .ctrls{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:8px}
+  .ctrls .btn{min-height:46px;padding:6px 4px;white-space:normal;line-height:1.1}
+  .it .acts .btn.primary{min-height:40px;padding:6px 12px}
+  nav.tabs{flex-wrap:nowrap;overflow-x:auto;max-width:100%;scrollbar-width:none}
+  header.top .meta{width:100%;justify-content:space-between}
+}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+h2{font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--fg)}
+.btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+input.f,select.f,textarea.f{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:6px 8px;min-width:0}
+textarea.f{width:100%;resize:vertical}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;color:var(--muted)}
+
+/* monitor no ar */
+.monitor{background:var(--stage-bg);color:var(--stage-fg);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.monitor .lbl{font-family:var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--stage-dim);font-size:14px;display:flex;justify-content:space-between;gap:8px}
+.monitor .tm{font-family:var(--display);font-weight:600;font-size:clamp(64px,11vw,120px);line-height:.95;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.monitor .ttl{font-size:15px;font-weight:500;overflow-wrap:anywhere}
+.tm.yellow,.stage-time.yellow{color:var(--stage-y)} .tm.red,.tm.over,.stage-time.red,.stage-time.over{color:var(--stage-r)}
+.bar{height:6px;background:#2a2d33;border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--stage-fg);transition:width .25s linear}
+.bar i.yellow{background:var(--stage-y)} .bar i.red,.bar i.over{background:var(--stage-r)}
+.monitor .msgprev{font-size:13px;color:var(--stage-dim)}
+.ctrls{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:6px;margin-top:10px}
+
+/* rundown */
+.rd{display:flex;flex-direction:column;gap:6px}
+.it{border:1px solid var(--line);border-radius:8px;padding:8px;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:center;background:var(--panel)}
+.it.active{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.it .n{font-family:var(--mono);color:var(--muted);text-align:center;font-size:12px}
+.it .fields{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.4fr) 76px;gap:6px;min-width:0}
+@media (max-width:520px){.it .fields{grid-template-columns:minmax(0,1fr) 76px}.it .fields .spk{grid-column:1/-1;grid-row:2}}
+.it .fields input{width:100%}
+.it .dur{font-family:var(--mono);text-align:right}
+.it .acts{display:flex;gap:4px;align-items:center}
+.it .status{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted);align-items:center}
+.tag{font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:4px;background:var(--bg);border:1px solid var(--line)}
+.tag.done{color:var(--ok)} .tag.live{color:var(--accent);border-color:var(--accent)} .tag.late{color:var(--bad)}
+details.cfg{grid-column:2/-1}
+details.cfg summary{cursor:pointer;font-size:12px;color:var(--muted);width:max-content}
+.cfggrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:8px}
+.cfggrid label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.empty{border:1px dashed var(--line);border-radius:8px;padding:18px;text-align:center;color:var(--muted)}
+.empty p{margin:0 0 10px}
+
+/* mensagens */
+.msgs{display:flex;flex-direction:column;gap:6px}
+.msg{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px}
+.msg.shown{border-color:var(--accent);background:var(--soft)}
+.msg input{width:100%}
+.swatch{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0}
+.swatch.sel{border-color:var(--fg)}
+.q{border-left:3px solid var(--line);padding:4px 0 4px 10px;display:flex;flex-direction:column;gap:4px}
+.q small{color:var(--muted)}
+
+/* tabelas */
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-family:var(--display);letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--muted);font-size:12px}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+td.plus{color:var(--bad)} td.minus{color:var(--ok)}
+tfoot td{font-weight:600;border-bottom:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.kpi b{display:block;font-family:var(--display);font-size:30px;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+
+/* palco (tela única escura, de propósito) */
+body.stage-mode{background:var(--stage-bg);color:var(--stage-fg)}
+#stage{position:fixed;inset:0;background:var(--stage-bg);color:var(--stage-fg);display:flex;flex-direction:column;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));overflow:hidden}
+.stage-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;font-family:var(--display);color:var(--stage-dim)}
+.stage-title{font-size:clamp(20px,3.6vw,46px);font-weight:600;color:var(--stage-fg);line-height:1.05;overflow-wrap:anywhere}
+.stage-spk{font-size:clamp(16px,2.4vw,30px)}
+.stage-clock{font-size:clamp(18px,2.6vw,34px);font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage-body{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:0;gap:2vh}
+.stage-time{font-family:var(--display);font-weight:600;font-size:min(30vw,52vh);line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.stage-sub{font-family:var(--display);font-size:clamp(18px,3vw,40px);color:var(--stage-dim);font-variant-numeric:tabular-nums}
+.stage-msg{font-family:var(--body);font-weight:600;text-align:center;line-height:1.1;max-width:94vw;overflow-wrap:anywhere}
+.stage-foot{display:flex;flex-direction:column;gap:10px}
+.stage-foot .bar{height:1.2vh;min-height:6px}
+.stage-next{font-family:var(--display);color:var(--stage-dim);font-size:clamp(14px,2vw,26px);display:flex;justify-content:space-between;gap:12px}
+.stage-tools{position:absolute;right:max(12px,env(safe-area-inset-right,0px));bottom:max(12px,env(safe-area-inset-bottom,0px));display:flex;gap:6px;opacity:0;transition:opacity .3s}
+#stage:hover .stage-tools,.stage-tools:focus-within{opacity:1}
+#stage.idle{cursor:none}#stage.idle .stage-tools{opacity:0}
+.stage-tools button{background:#1d1f24;color:#ddd;border:1px solid #3a3d44;border-radius:6px;padding:6px 10px;cursor:pointer}
+#stage.black > :not(.stage-tools){visibility:hidden}
+#stage.flash{animation:flash .5s steps(1) 6}
+@keyframes flash{50%{background:var(--stage-fg)}}
+@media (prefers-reduced-motion:reduce){#stage.flash{animation:none;outline:12px solid var(--stage-y);outline-offset:-12px}}
+
+/* agenda */
+.ag{display:flex;flex-direction:column;gap:2px}
+.ag-row{display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line);align-items:baseline}
+.ag-row .t{font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.ag-row .tt{font-weight:600;font-size:16px;overflow-wrap:anywhere}
+.ag-row .sp{color:var(--muted);font-size:13px}
+.ag-row.now{background:var(--soft);border-radius:6px}
+.ag-row.past .tt{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:max(16px,env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-weight:500;z-index:20}
+.note{font-size:12px;color:var(--muted);margin:8px 0 0}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.two{grid-template-columns:minmax(0,1fr)}}
+.ask{max-width:560px;margin:8vh auto 0}
+.home{max-width:620px;margin:8vh auto 0;display:flex;flex-direction:column;gap:18px}
+.home h1{font-family:var(--display);font-size:clamp(34px,7vw,52px);line-height:1;margin:0}
+.home .lead{color:var(--muted);font-size:15px;margin:0;max-width:52ch}
+.home .join{display:flex;gap:8px;flex-wrap:wrap}.home .join input{flex:1 1 160px;text-transform:uppercase;font-family:var(--mono);letter-spacing:.15em}
+.mine a{display:flex;justify-content:space-between;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line);color:inherit;text-decoration:none}
+.mine a span:last-child{font-family:var(--mono);color:var(--muted)}
+.code{font-family:var(--mono);letter-spacing:.18em;font-weight:500}
+.qrgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.qrcard{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.qr{background:#fff;padding:12px;border-radius:10px;line-height:0;max-width:100%}
+.qr svg,.qr img{width:min(260px,70vw);height:auto;display:block}
+.qrcard.big .qr svg,.qrcard.big .qr img{width:min(340px,80vw)}
+.linkbox{font-family:var(--mono);font-size:12px;color:var(--muted);overflow-wrap:anywhere;max-width:100%}
+.warn{border:1px solid var(--warn);color:var(--fg);background:var(--soft);border-radius:8px;padding:8px 10px;font-size:13px}
+.ask h1{font-family:var(--display);font-size:34px;margin:0 0 6px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="config.js"></script>
+</head><body>
+
+<div id="app"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid=()=>Math.random().toString(36).slice(2,10);
+const VIEWS=["controle","palco","agenda","moderador","registro","perguntas","conectar"];
+const CFG=window.CRONOMETRO_CONFIG||{};
+const BASE=location.origin+location.pathname;
+const QP=new URLSearchParams(location.search);
+const SID=(QP.get("s")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,12)||null;
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+let KEY=SID?(QP.get("k")||lsGet("ah-key-"+SID,null)):null;
+if(SID&&QP.get("k")){lsSet("ah-key-"+SID,QP.get("k"));history.replaceState(null,"",BASE+"?s="+SID+location.hash)}
+const linkFor=(v,withKey)=>BASE+"?s="+SID+(withKey&&KEY?"&k="+KEY:"")+"#"+v;
+const COLORS={white:"#f4f4f4",green:"#3ddc84",yellow:"#f5b700",red:"#ff3b30"};
+let OFFSET=0;const T=()=>Date.now()+OFFSET;
+
+function defaultState(){return{
+  show:"All Hands",items:[],messages:[],activeId:null,running:false,kickoff:0,elapsedBefore:0,extraMs:0,
+  runStartedAt:0,pausedMs:0,pauseStartedAt:0,shownMsgId:null,flashAt:0,blackout:false,firedOn:{},h24:true}}
+function defaultItem(p){return Object.assign({id:uid(),title:"Nova apresentação",speaker:"",notes:"",dur:600,mode:"down",trigger:"manual",at:"",wrapY:60,wrapR:15,chime:true},p||{})}
+
+let S=defaultState(),LOGS={},QS=[];
+let mode="loading",canWrite=false,peers=0,queued=null,sb=null,chan=null,ctlSeen=false;
+let view=currentView();
+let soundOn=false,audioCtx=null,lastPhase=null,lastRunKey="",handledAuto=new Set();
+let pendingRender=false;
+
+/* ---------- tempo ---------- */
+function parseDur(v){
+  v=String(v).trim(); if(!v) return 0;
+  if(v.includes(":")){const p=v.split(":").map(x=>parseInt(x,10)||0);return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1]}
+  const n=parseFloat(v.replace(",","."));return isFinite(n)?Math.round(n*60):0}
+function fmtDur(sec){sec=Math.max(0,Math.round(sec));const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;
+  return h?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${m}:${String(s).padStart(2,"0")}`}
+function fmtMs(ms,up){const neg=ms<0;const a=Math.abs(ms);const sec=up||neg?Math.floor(a/1000):Math.ceil(a/1000);return (neg?"−":"")+fmtDur(sec)}
+function fmtDelta(ms){const s=Math.round(ms/1000);if(s===0)return "0:00";return (s>0?"+":"−")+fmtDur(Math.abs(s))}
+function clock(t,secs){return new Date(t).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:secs?"2-digit":undefined,hour12:!S.h24})}
+function todayKey(){const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
+function atToday(hhmm){const m=/^(\d{1,2}):(\d{2})$/.exec(hhmm||"");if(!m)return null;const d=new Date();d.setHours(+m[1],+m[2],0,0);return d.getTime()}
+
+const item=id=>S.items.find(i=>i.id===id);
+const idx=id=>S.items.findIndex(i=>i.id===id);
+function live(now){
+  const it=item(S.activeId); if(!it) return null;
+  const elapsed=S.elapsedBefore+(S.running?now-S.kickoff:0);
+  const total=it.dur*1000+S.extraMs;
+  const remaining=total-elapsed;
+  let phase="ok";
+  if(S.runStartedAt||S.running){ if(remaining<=0)phase="over"; else if(remaining<=it.wrapR*1000)phase="red"; else if(remaining<=it.wrapY*1000)phase="yellow"; }
+  const progress=total>0?Math.min(1,elapsed/total):1;
+  let main,sub="";
+  if(it.mode==="up"){main=fmtMs(elapsed,true);sub="de "+fmtDur(total/1000)}
+  else if(it.mode==="tod"){main=clock(now,false);sub=fmtMs(remaining)}
+  else if(it.mode==="down+tod"){main=fmtMs(remaining);sub=clock(now,false)}
+  else main=fmtMs(remaining);
+  return{it,elapsed,total,remaining,phase,progress,main,sub,started:!!S.runStartedAt}}
+
+/* ---------- persistência ---------- */
+let writeChain=Promise.resolve(),outstanding=0,warned=false;
+async function rpc(fn,args){const {data,error}=await sb.rpc(fn,args);if(error){const e=new Error(error.message);e.code=error.code;throw e}return data}
+function ping(){if(chan)chan.send({type:"broadcast",event:"changed",payload:{at:Date.now()}}).catch(()=>{})}
+// tenta de novo até a internet voltar, na mesma ordem; nada que você fez se perde enquanto a página estiver aberta
+function send(fn,args){outstanding++;
+  const attempt=()=>rpc(fn,args).then(()=>{warned=false;if(mode!=="net"){mode="net";renderAll()}ping()}).catch(e=>{
+    if(e.code==="42501"){canWrite=false;toast("Este aparelho não tem a chave de controle desta sessão.");renderAll();return}
+    if(!warned){warned=true;toast("Sem internet. Guardei a alteração e vou reenviar sozinho.")}
+    if(mode!=="off"){mode="off";renderAll()}return new Promise(r=>setTimeout(r,2500)).then(attempt)});
+  return attempt().finally(()=>{outstanding--;if(!outstanding&&queued){const m=queued;queued=null;apply(m)}})}
+function save(){const snap=JSON.parse(JSON.stringify(S));writeChain=writeChain.then(()=>send("save_state",{p_id:SID,p_key:KEY,p_state:snap}));
+  rememberSession();renderAll()}
+function saveLog(id,log){LOGS[id]=log;writeChain=writeChain.then(()=>send("save_log",{p_id:SID,p_key:KEY,p_log_id:id,p_log:log}))}
+function dropLog(id){delete LOGS[id];writeChain=writeChain.then(()=>send("save_log",{p_id:SID,p_key:KEY,p_log_id:id,p_log:null}))}
+function onWriteErr(){toast("Não consegui salvar. Confira a internet.")}
+function rememberSession(){if(!SID||!KEY)return;const all=lsGet("ah-sessions",{});all[SID]={show:S.show,at:Date.now()};lsSet("ah-sessions",all)}
+
+/* ---------- ações ---------- */
+function guard(){if(!canWrite){toast("Só o celular ou notebook com a chave (QR) controla esta sessão.");return false}return true}
+function finishCurrent(now){
+  const it=item(S.activeId);
+  if(it&&S.runStartedAt){
+    const elapsed=S.elapsedBefore+(S.running?now-S.kickoff:0);
+    const paused=S.pausedMs+(!S.running&&S.pauseStartedAt?now-S.pauseStartedAt:0);
+    saveLog(it.id,{itemId:it.id,title:it.title,speaker:it.speaker,plannedMs:it.dur*1000,extraMs:S.extraMs,
+      elapsedMs:Math.round(elapsed),pausedMs:Math.round(paused),startedAt:S.runStartedAt,endedAt:now,order:idx(it.id)})}
+  Object.assign(S,{running:false,kickoff:0,elapsedBefore:0,extraMs:0,runStartedAt:0,pausedMs:0,pauseStartedAt:0})}
+function startItem(id,extra){
+  if(!guard())return;const now=T();
+  if(S.activeId===id&&S.runStartedAt){ if(!S.running)resume(); return }
+  if(S.activeId&&S.runStartedAt)finishCurrent(now);
+  Object.assign(S,{activeId:id,running:true,kickoff:now,elapsedBefore:0,extraMs:0,runStartedAt:now,pausedMs:0,pauseStartedAt:0},extra||{});
+  save()}
+function pause(){if(!guard()||!S.running)return;const now=T();S.elapsedBefore+=now-S.kickoff;S.running=false;S.pauseStartedAt=now;save()}
+function resume(){if(!guard())return;const now=T();
+  if(!S.activeId){const first=S.items[0];if(first)startItem(first.id);return}
+  if(!S.runStartedAt){startItem(S.activeId);return}
+  if(S.pauseStartedAt)S.pausedMs+=now-S.pauseStartedAt;S.running=true;S.kickoff=now;S.pauseStartedAt=0;save()}
+function toggle(){S.running?pause():resume()}
+function resetTimer(){if(!guard())return;Object.assign(S,{running:false,kickoff:0,elapsedBefore:0,extraMs:0,runStartedAt:0,pausedMs:0,pauseStartedAt:0});save()}
+function adjust(ms){if(!guard()||!S.activeId)return;S.extraMs+=ms;save()}
+function finish(){if(!guard()||!S.activeId)return;const i=idx(S.activeId);finishCurrent(T());S.activeId=S.items[i+1]?S.items[i+1].id:S.activeId;save()}
+function next(){if(!guard())return;const i=S.activeId?idx(S.activeId):-1;const n=S.items[i+1];
+  if(!n){finish();return} startItem(n.id)}
+function prev(){if(!guard())return;const i=idx(S.activeId);if(i<=0)return;
+  if(S.runStartedAt)finishCurrent(T());S.activeId=S.items[i-1].id;save()}
+function cue(id){if(!guard())return;if(S.activeId===id)return;if(S.runStartedAt)finishCurrent(T());S.activeId=id;save()}
+function addItem(p){if(!guard())return;S.items.push(defaultItem(p));save()}
+function updItem(id,patch){if(!guard())return;const it=item(id);if(!it)return;Object.assign(it,patch);save()}
+function delItem(id){if(!guard())return;if(S.activeId===id){resetTimer();S.activeId=null}S.items=S.items.filter(i=>i.id!==id);save()}
+function moveItem(id,d){if(!guard())return;const i=idx(id),j=i+d;if(j<0||j>=S.items.length)return;const a=S.items;[a[i],a[j]]=[a[j],a[i]];save()}
+function addMsg(text,color){if(!guard())return;S.messages.push({id:uid(),text:text||"",color:color||"white"});save()}
+function updMsg(id,patch){if(!guard())return;const m=S.messages.find(x=>x.id===id);if(m){Object.assign(m,patch);save()}}
+function delMsg(id){if(!guard())return;S.messages=S.messages.filter(x=>x.id!==id);if(S.shownMsgId===id)S.shownMsgId=null;save()}
+function showMsg(id){if(!guard())return;S.shownMsgId=S.shownMsgId===id?null:id;save()}
+function flash(){if(!guard())return;S.flashAt=T();save()}
+function blackout(){if(!guard())return;S.blackout=!S.blackout;save()}
+
+/* ---------- som ---------- */
+function ensureAudio(){try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();audioCtx.resume();soundOn=true}catch(e){soundOn=false}}
+function chime(kind){
+  if(!soundOn||!audioCtx)return;
+  const notes=kind==="over"?[880,660,880,660]:kind==="red"?[880,880]:[660];
+  notes.forEach((f,k)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type="sine";o.frequency.value=f;
+    const t=audioCtx.currentTime+k*0.28;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.35,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.25);
+    o.connect(g).connect(audioCtx.destination);o.start(t);o.stop(t+0.27)})}
+
+/* ---------- automação: encadeado e agendado ---------- */
+function automate(now,L){
+  if(!canWrite||!(view==="controle"||view==="moderador"))return;
+  if(L&&S.running&&L.remaining<=0){
+    const n=S.items[idx(L.it.id)+1];const key=S.runStartedAt+":"+L.it.id;
+    if(n&&n.trigger==="linked"&&!handledAuto.has(key)){handledAuto.add(key);startItem(n.id);return}}
+  const tk=todayKey();
+  for(const it of S.items){
+    if(it.trigger!=="scheduled")continue;const t=atToday(it.at);if(t==null)continue;
+    if(now>=t&&now-t<30000&&S.firedOn[it.id]!==tk&&!(S.activeId===it.id&&S.runStartedAt)){
+      S.firedOn[it.id]=tk;startItem(it.id,{});return}}}
+
+/* ---------- render ---------- */
+function currentView(){const h=location.hash.replace("#","");return VIEWS.includes(h)?h:(canWrite?"controle":"agenda")}
+function tabs(){
+  const labels={controle:"Controle",palco:"Palco",agenda:"Agenda",moderador:"Moderador",registro:"Registro de tempos",perguntas:"Perguntas",conectar:"Conectar celular"};
+  return `<nav class="tabs" aria-label="Telas">${VIEWS.filter(v=>canWrite||!["controle","moderador","registro"].includes(v)||v===view).map(v=>`<a href="#${v}" ${v===view?'aria-current="page"':""}>${labels[v]}</a>`).join("")}</nav>`}
+function syncPill(){
+  const ro=canWrite?"":" · só leitura";
+  if(mode==="net")return `<span class="pill live" title="Todos nesta sessão veem o mesmo estado">Sessão <span class="code">${SID}</span> · ${peers} conectado${peers===1?"":"s"}${ro}</span>`;
+  if(mode==="off")return `<span class="pill local" title="Sem internet; tentando de novo">Sem conexão</span>`;
+  if(mode==="missing")return `<span class="pill local">Sessão não encontrada</span>`;
+  return `<span class="pill">Conectando…</span>`}
+function header(){
+  return `<header class="top"><div class="brand"><a href="${BASE}" style="text-decoration:none"><small>All Hands</small></a>
+    <input id="showName" class="f" aria-label="Nome do evento" value="${esc(S.show)}" ${canWrite?"":"readonly"}></div>
+    ${tabs()}<div class="meta"><span id="hdrClock">${clock(T(),true)}</span>${syncPill()}</div></header>`}
+
+function renderAll(){
+  if(isEditing()){pendingRender=true;return}
+  pendingRender=false;
+  view=currentView();
+  const app=$("#app");
+  if(!CFG.supabaseUrl){app.innerHTML=`<div class="wrap"><div class="home"><h1>Cronômetro All Hands</h1><p class="warn">Falta configurar o banco (config.js).</p></div></div>`;return}
+  if(!SID){document.body.classList.remove("stage-mode");app.innerHTML=`<div class="wrap">${homeHTML()}</div>`;bindHome();return}
+  if(mode==="missing"){document.body.classList.remove("stage-mode");app.innerHTML=`<div class="wrap"><div class="home"><h1>Sessão ${esc(SID)} não existe</h1>
+    <p class="lead">Confira o código ou crie uma sessão nova.</p><div><a class="btn primary" href="${BASE}">Voltar ao início</a></div></div></div>`;return}
+  document.body.classList.toggle("stage-mode",view==="palco");
+  if(view==="palco"){app.innerHTML=stageHTML();bindStage();tick();return}
+  let body="";
+  if(view==="controle")body=controlHTML(true);
+  else if(view==="moderador")body=controlHTML(false);
+  else if(view==="agenda")body=agendaHTML();
+  else if(view==="registro")body=logHTML();
+  else if(view==="perguntas")body=askHTML();
+  else if(view==="conectar")body=connectHTML();
+  app.innerHTML=`<div class="wrap">${view==="perguntas"?"":header()}${body}</div>`;
+  bind();tick()}
+function isEditing(){const a=document.activeElement;return a&&a.matches&&a.matches("#app input,#app textarea,#app select")&&a.dataset.live!=="1"}
+
+function monitorHTML(){
+  return `<div class="monitor"><div class="lbl"><span id="mnState">—</span><span id="mnSub"></span></div>
+    <div class="tm" id="mnTime">0:00</div><div class="ttl" id="mnTitle"></div><div class="bar"><i id="mnBar"></i></div>
+    <div class="msgprev" id="mnMsg"></div></div>`}
+function controlHTML(full){
+  const d=!canWrite?"disabled":"";
+  const live=`<section class="card a-live"><h2>No ar</h2>${monitorHTML()}
+    <div class="ctrls">
+      <button class="btn primary" data-a="toggle" id="btnToggle" ${d}>Iniciar</button>
+      <button class="btn" data-a="prev" ${d}>Anterior</button>
+      <button class="btn" data-a="next" ${d}>Próximo</button>
+      <button class="btn" data-a="finish" ${d}>Encerrar</button>
+      <button class="btn" data-a="minus" ${d}>−1 min</button>
+      <button class="btn" data-a="plus" ${d}>+1 min</button>
+      <button class="btn" data-a="reset" ${d}>Zerar</button>
+      <button class="btn ${S.blackout?"on":""}" data-a="blackout" ${d}>Tela preta</button>
+    </div>
+    <p class="note"><kbd>Espaço</kbd> iniciar/pausar · <kbd>→</kbd> próximo · <kbd>←</kbd> anterior · <kbd>F</kbd> piscar · <kbd>B</kbd> tela preta</p>
+    <div class="row extra" style="margin-top:10px"><button class="btn sm ${soundOn?"on":""}" data-a="sound">${soundOn?"Som ligado neste aparelho":"Ligar som neste aparelho"}</button>
+    <a class="btn sm" href="#conectar">Conectar celular</a><a class="btn sm" href="#palco">Abrir palco</a><a class="btn sm" href="#registro">Ver registro</a></div></section>`;
+  return `<div class="ctl ${full?"":"mod"}">${live}${full?rundownHTML(d):""}${messagesHTML(d)}${questionsHTML(d)}</div>`}
+
+function itemStatus(it){
+  const lg=LOGS[it.id];
+  if(S.activeId===it.id&&S.runStartedAt)return `<span class="tag live">${S.running?"no ar":"pausado"}</span>`;
+  if(S.activeId===it.id)return `<span class="tag live">na fila</span>`;
+  if(lg){const delta=lg.elapsedMs-lg.plannedMs;return `<span class="tag done">feito em ${fmtDur(lg.elapsedMs/1000)}</span><span class="tag ${delta>0?"late":"done"}">${fmtDelta(delta)}</span>`}
+  return ""}
+const MODE_L={down:"Regressivo",up:"Progressivo",tod:"Hora do dia","down+tod":"Regressivo + hora"};
+const TRIG_L={manual:"Manual",linked:"Encadeado",scheduled:"Agendado"};
+function rundownHTML(d){
+  const total=S.items.reduce((a,i)=>a+i.dur,0);
+  const rows=S.items.map((it,k)=>`<div class="it ${S.activeId===it.id?"active":""}" data-id="${it.id}">
+    <div class="n">${k+1}</div>
+    <div class="fields"><input class="f" data-f="title" aria-label="Título" value="${esc(it.title)}" ${d}>
+      <input class="f spk" data-f="speaker" aria-label="Quem apresenta" placeholder="Quem apresenta" value="${esc(it.speaker)}" ${d}>
+      <input class="f dur" data-f="dur" aria-label="Duração" value="${fmtDur(it.dur)}" ${d}></div>
+    <div class="acts"><button class="btn sm primary" data-a="play" ${d} title="Iniciar este">${S.activeId===it.id&&S.running?"No ar":"Iniciar"}</button>
+      <button class="btn sm ghost" data-a="up" ${d} aria-label="Subir">↑</button><button class="btn sm ghost" data-a="down" ${d} aria-label="Descer">↓</button></div>
+    <div class="status">${itemStatus(it)}<span>${MODE_L[it.mode]}</span><span>${TRIG_L[it.trigger]}${it.trigger==="scheduled"&&it.at?" às "+esc(it.at):""}</span>${it.notes?`<span>${esc(it.notes)}</span>`:""}</div>
+    <details class="cfg"><summary>Ajustes</summary><div class="cfggrid">
+      <label>Tipo<select class="f" data-f="mode" ${d}>${Object.entries(MODE_L).map(([k,v])=>`<option value="${k}" ${it.mode===k?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label>Início<select class="f" data-f="trigger" ${d}>${Object.entries(TRIG_L).map(([k,v])=>`<option value="${k}" ${it.trigger===k?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label>Horário (agendado)<input class="f" type="time" data-f="at" value="${esc(it.at)}" ${d}></label>
+      <label>Amarelo faltando (s)<input class="f" type="number" min="0" data-f="wrapY" value="${it.wrapY}" ${d}></label>
+      <label>Vermelho faltando (s)<input class="f" type="number" min="0" data-f="wrapR" value="${it.wrapR}" ${d}></label>
+      <label>Notas<input class="f" data-f="notes" value="${esc(it.notes)}" ${d}></label>
+      <label>&nbsp;<button class="btn sm" data-a="cue" ${d}>Deixar na fila</button></label>
+      <label>&nbsp;<button class="btn sm" data-a="del" ${d}>Remover</button></label>
+    </div></details></div>`).join("");
+  const empty=`<div class="empty"><p>A pauta está vazia. Adicione as apresentações do All Hands ou importe um CSV.</p>
+    <button class="btn" data-a="sample" ${d}>Carregar pauta de exemplo</button></div>`;
+  return `<section class="card a-run"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Pauta · ${S.items.length} itens · ${fmtDur(total)}</h2>
+    <button class="btn primary sm" data-a="add" ${d}>Adicionar apresentação</button></div>
+    <div class="rd">${S.items.length?rows:empty}</div>
+    <details style="margin-top:12px"><summary class="note" style="cursor:pointer">Importar CSV</summary>
+      <p class="note">Uma linha por apresentação: <code>título;quem apresenta;duração;tipo;início;horário</code>. Duração em minutos ou mm:ss. Tipo: regressivo, progressivo, hora, regressivo+hora. Início: manual, encadeado, agendado.</p>
+      <textarea class="f" id="csvIn" rows="4" placeholder="Abertura;Ana;5&#10;Resultados do trimestre;Bruno;12:30;regressivo;encadeado"></textarea>
+      <div class="row" style="margin-top:6px"><button class="btn sm" data-a="import" ${d}>Adicionar à pauta</button><button class="btn sm" data-a="importReplace" ${d}>Substituir a pauta</button></div>
+    </details></section>`}
+
+function messagesHTML(d){
+  const rows=S.messages.map(m=>`<div class="msg ${S.shownMsgId===m.id?"shown":""}" data-mid="${m.id}">
+    <input class="f" data-m="text" aria-label="Texto da mensagem" value="${esc(m.text)}" ${d}>
+    <div class="row">${Object.keys(COLORS).map(c=>`<button class="swatch ${m.color===c?"sel":""}" style="background:${COLORS[c]}" data-a="mcolor" data-c="${c}" aria-label="Cor ${c}" ${d}></button>`).join("")}
+      <button class="btn sm ${S.shownMsgId===m.id?"on":""}" data-a="mshow" ${d}>${S.shownMsgId===m.id?"Ocultar":"Mostrar"}</button>
+      <button class="btn sm ghost" data-a="mdel" ${d} aria-label="Apagar mensagem">×</button></div></div>`).join("");
+  return `<section class="card a-msg"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Mensagens para o palco</h2>
+    <div class="row"><button class="btn sm" data-a="flash" ${d}>Piscar tela</button><button class="btn sm primary" data-a="madd" ${d}>Nova</button></div></div>
+    <div class="msgs">${rows||`<div class="empty"><p>Nenhuma mensagem. Ex.: "Faltam 2 minutos", "Fale mais perto do microfone".</p></div>`}</div></section>`}
+
+function questionsHTML(d){
+  if(mode!=="net"&&!QS.length)return `<section class="card a-q"><h2>Perguntas da plateia</h2><p class="note">Conectando…</p></section>`;
+  const rows=QS.map(q=>`<div class="q" data-qid="${q.id}"><div>${esc(q.text)}</div><small>${esc(q.name||"Anônimo")} · ${clock(q.at,false)}</small>
+    <div class="row"><button class="btn sm" data-a="qmsg" ${d}>Virar mensagem</button><button class="btn sm ghost" data-a="qdel" ${d}>Dispensar</button></div></div>`).join("");
+  return `<section class="card a-q"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Perguntas da plateia ·${QS.length}</h2><a class="btn sm" href="#conectar">QR das perguntas</a></div>
+    <div class="stack" style="gap:10px">${rows||`<p class="note" style="margin:0">Mostre o QR das perguntas para o pessoal. O que chegar aparece aqui.</p>`}</div></section>`}
+
+function stageHTML(){
+  return `<div id="stage"><div class="stage-head"><div><div class="stage-title" id="stTitle"></div><div class="stage-spk" id="stSpk"></div></div><div class="stage-clock" id="stClock"></div></div>
+    <div class="stage-body"><div class="stage-time" id="stTime">0:00</div><div class="stage-sub" id="stSub"></div><div class="stage-msg" id="stMsg" hidden></div></div>
+    <div class="stage-foot"><div class="bar"><i id="stBar"></i></div><div class="stage-next"><span id="stNext"></span><span id="stShow"></span></div></div>
+    <div class="stage-tools"><button id="stFull">Tela cheia</button><button id="stSound">${soundOn?"Som ligado":"Ligar som"}</button>${canWrite?`<button onclick="location.hash='conectar'">Conectar celular</button><button onclick="location.hash='controle'">Controle</button>`:""}</div></div>`}
+
+function agendaHTML(){
+  let t=null;const rows=S.items.map((it,k)=>{
+    const lg=LOGS[it.id],isNow=S.activeId===it.id&&S.runStartedAt;
+    let when;
+    if(lg){when=lg.startedAt;t=lg.endedAt}
+    else if(isNow){when=S.runStartedAt;t=S.runStartedAt+it.dur*1000+S.extraMs}
+    else{const sch=it.trigger==="scheduled"?atToday(it.at):null;when=sch||(t??null);if(when!=null)t=when+it.dur*1000}
+    const st=isNow?"now":lg?"past":"";
+    return `<div class="ag-row ${st}"><span class="t">${when?clock(when,false):"—"}</span><div><div class="tt">${esc(it.title)}</div><div class="sp">${esc(it.speaker)}</div></div>
+      <span class="t">${isNow?"<b>agora</b>":lg?fmtDur(lg.elapsedMs/1000):fmtDur(it.dur)}</span></div>`}).join("");
+  return `<section class="card"><h2>Agenda · ${esc(S.show)}</h2><div class="ag">${rows||`<div class="empty"><p>A pauta ainda não foi montada.</p></div>`}</div>
+    <p class="note">Horários previstos contam a partir do que já começou. Itens agendados usam o horário marcado.</p></section>`}
+
+function logRows(){
+  const order=S.items.map(i=>i.id);
+  const all=Object.values(LOGS).slice().sort((a,b)=>{const ia=order.indexOf(a.itemId),ib=order.indexOf(b.itemId);return (ia<0?999:ia)-(ib<0?999:ib)||a.startedAt-b.startedAt});
+  return all}
+function logHTML(){
+  const rows=logRows();const now=T();const L=live(now);
+  const planned=rows.reduce((a,r)=>a+r.plannedMs,0),actual=rows.reduce((a,r)=>a+r.elapsedMs,0);
+  const late=rows.filter(r=>r.elapsedMs>r.plannedMs).length;
+  const first=rows.length?Math.min(...rows.map(r=>r.startedAt)):null,last=rows.length?Math.max(...rows.map(r=>r.endedAt)):null;
+  const tr=rows.map(r=>{const dl=r.elapsedMs-r.plannedMs;return `<tr><td>${esc(r.title)}</td><td>${esc(r.speaker)}</td><td class="num">${fmtDur(r.plannedMs/1000)}</td><td class="num">${fmtDur(r.elapsedMs/1000)}</td>
+    <td class="num ${dl>0?"plus":"minus"}">${fmtDelta(dl)}</td><td class="num">${clock(r.startedAt,true)}</td><td class="num">${clock(r.endedAt,true)}</td><td class="num">${r.pausedMs>999?fmtDur(r.pausedMs/1000):"—"}</td>
+    <td>${canWrite?`<button class="btn sm ghost" data-a="ldel" data-lid="${esc(r.itemId)}">Apagar</button>`:""}</td></tr>`}).join("");
+  const liveRow=L&&L.started?`<tr><td>${esc(L.it.title)} <span class="tag live">no ar</span></td><td>${esc(L.it.speaker)}</td><td class="num">${fmtDur(L.total/1000)}</td><td class="num" id="lgLive">${fmtDur(L.elapsed/1000)}</td><td></td><td class="num">${clock(S.runStartedAt,true)}</td><td></td><td></td><td></td></tr>`:"";
+  const dl=actual-planned;
+  return `<section class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Registro de tempos</h2>
+      <div class="row"><button class="btn sm" data-a="csvCopy">Copiar CSV</button><button class="btn sm" data-a="csvSave">Baixar CSV</button>
+      ${canWrite&&rows.length?`<button class="btn sm ghost" data-a="lclear" id="lclear">Limpar registro</button>`:""}</div></div>
+    <div class="kpis"><div class="kpi"><b>${rows.length}/${S.items.length}</b><span>apresentações feitas</span></div>
+      <div class="kpi"><b>${fmtDur(actual/1000)}</b><span>tempo real somado (previsto ${fmtDur(planned/1000)})</span></div>
+      <div class="kpi"><b style="color:${dl>0?"var(--bad)":"var(--ok)"}">${fmtDelta(dl)}</b><span>diferença total</span></div>
+      <div class="kpi"><b>${late}</b><span>estouraram o tempo</span></div>
+      <div class="kpi"><b>${first?clock(first,false)+"–"+clock(last,false):"—"}</b><span>do início ao fim</span></div></div>
+    <div class="tbl"><table><thead><tr><th>Apresentação</th><th>Quem</th><th class="num">Previsto</th><th class="num">Real</th><th class="num">Diferença</th><th class="num">Início</th><th class="num">Fim</th><th class="num">Pausas</th><th></th></tr></thead>
+      <tbody>${tr}${liveRow}${!tr&&!liveRow?`<tr><td colspan="9" style="color:var(--muted)">Nada registrado ainda. Cada apresentação entra aqui quando você clica em Próximo ou Encerrar.</td></tr>`:""}</tbody></table></div>
+    <p class="note">O tempo real desconta as pausas. A diferença compara com a duração prevista na pauta (os +1 min dados no ar contam como estouro).</p></section>`}
+function csv(){
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const lines=[["apresentacao","quem","previsto","real","diferenca","inicio","fim","pausas"].join(",")];
+  logRows().forEach(r=>lines.push([q(r.title),q(r.speaker),fmtDur(r.plannedMs/1000),fmtDur(r.elapsedMs/1000),fmtDelta(r.elapsedMs-r.plannedMs),
+    new Date(r.startedAt).toLocaleString("pt-BR"),new Date(r.endedAt).toLocaleString("pt-BR"),fmtDur(r.pausedMs/1000)].map(x=>/^"/.test(x)?x:q(x)).join(",")));
+  return lines.join("\n")}
+
+function askHTML(){
+  return `<div class="ask"><h1>Pergunta para o All Hands</h1><p class="note" style="font-size:14px">Escreva sua pergunta. Quem conduz vê na hora e pode mostrar no telão.</p>
+    ${SID?`<form id="askForm" class="stack" style="gap:10px;margin-top:16px">
+      <textarea class="f" id="askText" rows="4" maxlength="400" required placeholder="Sua pergunta"></textarea>
+      <input class="f" id="askName" maxlength="60" placeholder="Seu nome (opcional)">
+      <div class="row"><button class="btn primary" type="submit">Enviar pergunta</button><a class="btn ghost" href="#agenda">Ver agenda</a></div></form>`
+      :`<p class="note">Abra pelo QR ou link da sessão.</p>`}</div>`}
+
+function qrSVG(text){try{const q=qrcode(0,"M");q.addData(text);q.make();return q.createSvgTag({cellSize:6,margin:2,scalable:true})}catch(e){return ""}}
+function connectHTML(){
+  const view2=(label,v,desc,key,big)=>`<div class="qrcard ${big?"big":""}"><h2 style="margin:0">${label}</h2><div class="qr">${qrSVG(linkFor(v,key))}</div>
+    <p class="note" style="margin:0">${desc}</p><div class="linkbox">${esc(linkFor(v,key))}</div>
+    <button class="btn sm" data-a="copy" data-link="${esc(linkFor(v,key))}">Copiar link</button></div>`;
+  return `<section class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Sessão <span class="code">${SID}</span></h2>
+      <a class="btn primary" href="#palco">Abrir palco neste aparelho</a></div>
+    ${canWrite?`<p class="warn">O QR de controle dá acesso total à sessão. Não mostre no telão para a plateia.</p>`:""}
+    <div class="qrgrid" style="margin-top:12px">
+    ${canWrite?view2("Controle pelo celular","controle","Escaneie com o celular de quem vai rodar os tempos. Quando ele conectar, este aparelho vai sozinho para o palco.",true,true):""}
+    ${view2("Perguntas da plateia","perguntas","Pode mostrar para todo mundo: só envia perguntas.",false,false)}
+    ${view2("Agenda","agenda","Só leitura: pauta, o que está no ar e o que vem depois.",false,false)}
+    ${canWrite?view2("Palco em outro aparelho","palco","Só leitura: abre o timer em tela cheia num segundo notebook ou TV.",false,false):""}
+    </div></section>`}
+
+function homeHTML(){
+  const mine=Object.entries(lsGet("ah-sessions",{})).sort((a,b)=>b[1].at-a[1].at).slice(0,8);
+  return `<div class="home"><div><h1>Cronômetro All Hands</h1></div>
+    <p class="lead">Crie uma sessão neste notebook, escaneie o QR com o celular e controle os tempos do palco pelo celular. Cada apresentação fica registrada com o tempo real.</p>
+    <div class="row"><button class="btn primary" id="btnCreate">Criar sessão</button></div>
+    <section class="card"><h2>Entrar numa sessão</h2><form class="join" id="joinForm"><input class="f" id="joinCode" maxlength="8" placeholder="CÓDIGO" aria-label="Código da sessão" autocomplete="off"><button class="btn" type="submit">Entrar</button></form>
+      <p class="note">Com o código você vê agenda e palco e manda perguntas. Para controlar, use o QR de controle.</p></section>
+    ${mine.length?`<section class="card"><h2>Sessões criadas neste aparelho</h2><div class="mine">${mine.map(([id,m])=>`<a href="${BASE}?s=${id}#controle"><span>${esc(m.show||"All Hands")}</span><span>${id} · ${new Date(m.at).toLocaleDateString("pt-BR")}</span></a>`).join("")}</div></section>`:""}
+  </div>`}
+function bindHome(){
+  $("#btnCreate").onclick=async e=>{e.target.disabled=true;e.target.textContent="Criando…";
+    try{const r=await rpc("create_session",{});lsSet("ah-key-"+r.id,r.key);const all=lsGet("ah-sessions",{});all[r.id]={show:"All Hands",at:Date.now()};lsSet("ah-sessions",all);
+      location.href=BASE+"?s="+r.id+"#conectar"}
+    catch(err){e.target.disabled=false;e.target.textContent="Criar sessão";toast("Não consegui criar a sessão. Confira a internet.")}};
+  $("#joinForm").onsubmit=e=>{e.preventDefault();const c=$("#joinCode").value.toUpperCase().replace(/[^A-Z0-9]/g,"");if(c)location.href=BASE+"?s="+c+"#agenda"}}
+
+/* ---------- tick ---------- */
+function tick(){
+  const now=T();const L=live(now);
+  const hc=$("#hdrClock");if(hc)hc.textContent=clock(now,true);
+  // som: muda de fase
+  const runKey=S.runStartedAt+":"+S.activeId;
+  if(runKey!==lastRunKey){lastRunKey=runKey;lastPhase=L?L.phase:null}
+  else if(L&&L.phase!==lastPhase){if(L.it.chime&&S.running&&(view==="palco"||view==="controle"||view==="moderador"))chime(L.phase);lastPhase=L.phase}
+  automate(now,L);
+  const msg=S.messages.find(m=>m.id===S.shownMsgId);
+  if(view==="palco"){
+    const st=$("#stage");if(!st)return;
+    st.classList.toggle("black",!!S.blackout);
+    if(S.flashAt&&now-S.flashAt<3200&&!st.classList.contains("flash")){st.classList.add("flash");setTimeout(()=>st.classList.remove("flash"),3200-(now-S.flashAt))}
+    $("#stClock").textContent=clock(now,false);$("#stShow").textContent=S.show;
+    const t=$("#stTime"),sub=$("#stSub"),bar=$("#stBar");
+    if(L){t.textContent=L.main;t.className="stage-time "+(L.it.mode==="tod"?"":L.phase);sub.textContent=L.sub;$("#stTitle").textContent=L.it.title;$("#stSpk").textContent=L.it.speaker;
+      bar.style.width=(L.progress*100)+"%";bar.className=L.phase;const n=S.items[idx(L.it.id)+1];$("#stNext").textContent=n?"A seguir: "+n.title:""}
+    else{t.textContent=clock(now,false);t.className="stage-time";sub.textContent="";$("#stTitle").textContent=S.show;$("#stSpk").textContent="";bar.style.width="0";$("#stNext").textContent=""}
+    const m=$("#stMsg");
+    if(msg&&msg.text){m.hidden=false;if(m.textContent!==msg.text)m.textContent=msg.text;m.style.color=COLORS[msg.color]||COLORS.white;
+      const len=msg.text.length;m.style.fontSize=`min(${Math.max(4,Math.min(12,90/Math.sqrt(len+4)))}vw,${Math.max(6,Math.min(16,140/Math.sqrt(len+4)))}vh)`;
+      t.style.fontSize="min(16vw,26vh)"}
+    else{m.hidden=true;t.style.fontSize=""}
+    return}
+  const mt=$("#mnTime");
+  if(mt){
+    if(L){mt.textContent=L.main;mt.className="tm "+(L.it.mode==="tod"?"":L.phase);$("#mnTitle").textContent=L.it.title+(L.it.speaker?" · "+L.it.speaker:"");
+      $("#mnBar").style.width=(L.progress*100)+"%";$("#mnBar").className=L.phase;
+      $("#mnState").textContent=L.started?(S.running?(L.remaining<0?"Estourado":"No ar"):"Pausado"):"Na fila";$("#mnSub").textContent=L.sub||("termina "+(S.running?clock(now+L.remaining,false):"—"))}
+    else{mt.textContent="0:00";mt.className="tm";$("#mnTitle").textContent=S.items.length?"Escolha uma apresentação na pauta":"";$("#mnBar").style.width="0";$("#mnState").textContent="Parado";$("#mnSub").textContent=""}
+    $("#mnMsg").textContent=(S.blackout?"Palco em tela preta. ":"")+(msg&&msg.text?"Mensagem no palco: "+msg.text:"");
+    const b=$("#btnToggle");if(b)b.textContent=S.running?"Pausar":(L&&L.started?"Continuar":"Iniciar")}
+  const lgl=$("#lgLive");if(lgl&&L)lgl.textContent=fmtDur(L.elapsed/1000)}
+
+/* ---------- eventos ---------- */
+function bind(){
+  const sn=$("#showName");if(sn)sn.addEventListener("change",()=>{if(guard()){S.show=sn.value.trim()||"All Hands";save()}});
+  const app=$("#app");
+  app.onclick=e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
+    const row=b.closest("[data-id]"),id=row&&row.dataset.id,mrow=b.closest("[data-mid]"),mid=mrow&&mrow.dataset.mid,qrow=b.closest("[data-qid]"),qid=qrow&&qrow.dataset.qid;
+    switch(a){
+      case"toggle":toggle();break;case"prev":prev();break;case"next":next();break;case"finish":finish();break;
+      case"minus":adjust(-60000);break;case"plus":adjust(60000);break;case"reset":resetTimer();break;case"blackout":blackout();break;
+      case"sound":ensureAudio();renderAll();break;case"flash":flash();break;
+      case"play":startItem(id);break;case"up":moveItem(id,-1);break;case"down":moveItem(id,1);break;case"del":delItem(id);break;case"cue":cue(id);break;
+      case"add":addItem({});break;case"sample":loadSample();break;
+      case"import":importCsv(false);break;case"importReplace":importCsv(true);break;
+      case"madd":addMsg("","white");break;case"mcolor":updMsg(mid,{color:b.dataset.c});break;case"mshow":showMsg(mid);break;case"mdel":delMsg(mid);break;
+      case"qmsg":{const q=QS.find(x=>x.id===qid);if(q&&guard()){const m={id:uid(),text:q.text,color:"white"};S.messages.push(m);S.shownMsgId=m.id;save();QS=QS.filter(x=>x.id!==qid);send("delete_question",{p_id:SID,p_key:KEY,p_qid:qid})}break}
+      case"qdel":if(guard()){QS=QS.filter(x=>x.id!==qid);renderAll();send("delete_question",{p_id:SID,p_key:KEY,p_qid:qid})}break;
+      case"copy":copyText(b.dataset.link);break;
+      case"csvCopy":copyCsv();break;case"csvSave":saveCsv();break;
+      case"ldel":dropLog(b.dataset.lid);renderAll();break;
+      case"lclear":if(b.dataset.armed){Object.keys(LOGS).forEach(dropLog);renderAll()}else{b.dataset.armed="1";b.textContent="Clique de novo para apagar tudo";b.classList.add("on")}break;
+    }};
+  app.onchange=e=>{const el=e.target;
+    if(el.dataset.f){const id=el.closest("[data-id]").dataset.id;const f=el.dataset.f;let v=el.value;
+      if(f==="dur")v=parseDur(v)||60;else if(f==="wrapY"||f==="wrapR")v=Math.max(0,parseInt(v,10)||0);
+      updItem(id,{[f]:v})}
+    else if(el.dataset.m){updMsg(el.closest("[data-mid]").dataset.mid,{text:el.value})}};
+  app.addEventListener("focusout",()=>setTimeout(()=>{if(pendingRender&&!isEditing())renderAll()},0));
+  const f=$("#askForm");if(f)f.addEventListener("submit",async e=>{e.preventDefault();const text=$("#askText").value.trim();if(!text)return;
+    try{await rpc("add_question",{p_id:SID,p_text:text,p_name:$("#askName").value.trim()});ping();$("#askText").value="";toast("Pergunta enviada.")}
+    catch(err){toast("Não consegui enviar. Tente de novo.")}})}
+function bindStage(){
+  $("#stFull").onclick=async()=>{try{await document.documentElement.requestFullscreen()}catch(e){toast("Tela cheia não está disponível aqui.")}
+    try{await navigator.wakeLock.request("screen")}catch(e){}};
+  $("#stSound").onclick=()=>{ensureAudio();$("#stSound").textContent=soundOn?"Som ligado":"Ligar som"};
+  const st=$("#stage");let idleT;const wake=()=>{st.classList.remove("idle");clearTimeout(idleT);idleT=setTimeout(()=>st.classList.add("idle"),2500)};
+  st.addEventListener("mousemove",wake);wake()}
+document.addEventListener("keydown",e=>{
+  if(!(view==="controle"||view==="moderador"))return;
+  if(e.target.matches("input,textarea,select")||e.metaKey||e.ctrlKey||e.altKey)return;
+  const k=e.key.toLowerCase();
+  if(k===" "){e.preventDefault();toggle()}else if(k==="arrowright")next();else if(k==="arrowleft")prev();else if(k==="f")flash();else if(k==="b")blackout()});
+window.addEventListener("hashchange",()=>{renderAll();announce()});
+
+async function copyText(t){try{await navigator.clipboard.writeText(t);toast("Link copiado.")}catch(e){toast("Não deu para copiar. Segure o link para copiar.")}}
+function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>el.hidden=true,2600)}
+async function copyCsv(){const t=csv();try{await navigator.clipboard.writeText(t);toast("CSV copiado.")}catch(e){
+  const ta=document.createElement("textarea");ta.value=t;ta.className="f";ta.rows=6;$("#app .card").append(ta);ta.select();toast("Selecionei o CSV abaixo. Copie com Ctrl+C.")}}
+function saveCsv(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv()],{type:"text/csv"}));a.download=`all-hands-tempos-${todayKey()}.csv`;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+function importCsv(replace){
+  if(!guard())return;const txt=($("#csvIn")||{}).value||"";
+  const mm={regressivo:"down",progressivo:"up",hora:"tod","regressivo+hora":"down+tod"},tm={manual:"manual",encadeado:"linked",agendado:"scheduled"};
+  const items=txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.split(l.includes(";")?";":",").map(s=>s.trim());
+    return defaultItem({title:p[0]||"Sem título",speaker:p[1]||"",dur:parseDur(p[2]||"5")||300,mode:mm[(p[3]||"").toLowerCase()]||"down",trigger:tm[(p[4]||"").toLowerCase()]||"manual",at:p[5]||""})});
+  if(!items.length){toast("Cole ao menos uma linha.");return}
+  if(replace){resetTimer();S.activeId=null;S.items=items}else S.items.push(...items);save();toast(`${items.length} itens na pauta.`)}
+function loadSample(){
+  if(!guard())return;
+  S.items=[["Abertura e avisos","Exemplo: Liderança",5],["Resultados do trimestre","Exemplo: Financeiro",12],["Engenharia: o que entregamos","Exemplo: Engenharia",10],
+    ["Novidades dos jogos","Exemplo: Produto",10],["Reconhecimentos","Exemplo: Pessoas",6],["Perguntas e respostas","Exemplo: Todos",15]]
+    .map(([t,s,m],k)=>defaultItem({title:t,speaker:s,dur:m*60,trigger:"manual"}));
+  S.messages=[{id:uid(),text:"Faltam 2 minutos",color:"yellow"},{id:uid(),text:"Encerre, por favor",color:"red"},{id:uid(),text:"Fale mais perto do microfone",color:"white"}];
+  save()}
+
+/* ---------- boot ---------- */
+function apply(m){
+  if(!m){mode="missing";renderAll();return}
+  S=m.state&&Object.keys(m.state).length?Object.assign(defaultState(),m.state):defaultState();
+  LOGS=m.logs||{};QS=(m.questions||[]).slice().sort((a,b)=>b.at-a.at);mode="net";
+  if(canWrite)rememberSession();renderAll()}
+async function refresh(){try{const m=await rpc("get_session",{p_id:SID});if(outstanding&&m){queued=m;return}apply(m)}catch(e){if(mode!=="off"){mode="off";renderAll()}}}
+let refreshT=null;function scheduleRefresh(){clearTimeout(refreshT);refreshT=setTimeout(refresh,60)}
+async function syncClock(){
+  let best=null;
+  for(let k=0;k<3;k++){try{const t0=Date.now();const now=await rpc("server_now",{});const t1=Date.now();
+    if(!best||t1-t0<best.rtt)best={rtt:t1-t0,off:now-(t0+t1)/2}}catch(e){}}
+  if(best)OFFSET=best.off}
+function announce(){if(chan)chan.track({view:currentView(),ctl:canWrite&&!["palco","conectar"].includes(currentView()),at:Date.now()}).catch(()=>{})}
+function onPresence(){
+  const st=chan.presenceState();const list=Object.values(st).flat();peers=list.length;
+  const ctl=list.some(p=>p.ctl);
+  // o celular escaneou o QR: o notebook que mostra o QR vai sozinho para o palco
+  if(ctl&&!ctlSeen&&currentView()==="conectar"&&canWrite){ctlSeen=true;toast("Celular conectado. Abrindo o palco.");setTimeout(()=>{location.hash="palco"},1200)}
+  ctlSeen=ctlSeen||ctl;
+  const pl=document.querySelector(".pill");if(pl&&!isEditing())renderAll()}
+setInterval(tick,200);
+(async()=>{
+  if(!CFG.supabaseUrl||!window.supabase){renderAll();return}
+  sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey,{auth:{persistSession:false}});
+  if(!SID){renderAll();return}
+  if(KEY){try{canWrite=!!(await rpc("check_key",{p_id:SID,p_key:KEY}))}catch(e){canWrite=false}}
+  if(!location.hash)history.replaceState(null,"",BASE+"?s="+SID+"#"+(canWrite?"controle":"agenda"));
+  renderAll();
+  await syncClock();await refresh();
+  chan=sb.channel("sessao-"+SID,{config:{broadcast:{self:false},presence:{key:Math.random().toString(36).slice(2)}}});
+  chan.on("broadcast",{event:"changed"},scheduleRefresh).on("presence",{event:"sync"},onPresence)
+    .subscribe(st=>{if(st==="SUBSCRIBED"){announce();refresh()}});
+  setInterval(refresh,20000);setInterval(syncClock,120000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden){refresh();syncClock()}});
+})();
+})();
+</script>
+</body></html>
