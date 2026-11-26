@@ -1,0 +1,34 @@
+# O plano free do Supabase pausa o projeto depois de uns dias sem requisição.
+# Este ping chama server_now a cada 3 dias com a URL e a chave anon do config.js.
+name: Supabase keepalive
+
+on:
+  schedule:
+    - cron: "17 12 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ping server_now
+        run: |
+          url=$(grep -oE 'supabaseUrl: *"[^"]+"' config.js | cut -d'"' -f2)
+          key=$(grep -oE 'supabaseAnonKey: *"[^"]+"' config.js | cut -d'"' -f2)
+          curl -sSf --retry 3 --retry-delay 20 -X POST "$url/rest/v1/rpc/server_now" \
+            -H "apikey: $key" -H "Authorization: Bearer $key" \
+            -H "Content-Type: application/json" -d '{}'
+
+      # O GitHub desliga workflow agendado depois de 60 dias sem atividade no repo;
+      # reabilitar zera essa contagem.
+      - name: Keep workflow enabled
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/keepalive.yml/enable"
