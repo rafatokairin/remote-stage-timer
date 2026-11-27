@@ -10,9 +10,19 @@ create table if not exists public.sessions (
   state       jsonb not null default '{}'::jsonb,
   logs        jsonb not null default '{}'::jsonb,
   questions   jsonb not null default '[]'::jsonb,
+  pw_hash     text,
+  device_keys text[] not null default '{}',
+  pw_fails    int not null default 0,
+  pw_fail_at  timestamptz,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+
+-- colunas da senha da sessão, para bancos criados antes dela
+alter table public.sessions add column if not exists pw_hash text;
+alter table public.sessions add column if not exists device_keys text[] not null default '{}';
+alter table public.sessions add column if not exists pw_fails int not null default 0;
+alter table public.sessions add column if not exists pw_fail_at timestamptz;
 
 alter table public.sessions enable row level security;
 revoke all on public.sessions from anon, authenticated;
@@ -22,7 +32,7 @@ returns boolean language sql stable security definer set search_path = public, e
   select exists (
     select 1 from sessions
     where id = upper(p_id)
-      and key_hash = encode(digest(coalesce(p_key, ''), 'sha256'), 'hex')
+      and encode(digest(coalesce(p_key, ''), 'sha256'), 'hex') = any(device_keys || key_hash)
   );
 $$;
 revoke all on function public._key_ok(text, text) from public, anon, authenticated;
@@ -50,6 +60,7 @@ $$;
 create or replace function public.get_session(p_id text)
 returns jsonb language sql stable security definer set search_path = public as $$
   select jsonb_build_object('id', id, 'state', state, 'logs', logs, 'questions', questions,
+                            'has_pw', pw_hash is not null,
                             'updated_at', extract(epoch from updated_at) * 1000)
   from sessions where id = upper(p_id);
 $$;
@@ -125,7 +136,52 @@ begin
 end;
 $$;
 
+-- senha da sessão: quem tem a chave define; outro aparelho troca a senha por uma chave própria.
+-- Vazia remove a senha e desconecta os aparelhos que entraram por ela.
+create or replace function public.set_password(p_id text, p_key text, p_pw text)
+returns boolean language plpgsql volatile security definer set search_path = public, extensions as $$
+begin
+  if not _key_ok(p_id, p_key) then raise exception 'chave inválida' using errcode = '42501'; end if;
+  if coalesce(p_pw, '') = '' then
+    update sessions set pw_hash = null, device_keys = '{}', pw_fails = 0, updated_at = now() where id = upper(p_id);
+  else
+    if length(p_pw) < 4 or length(p_pw) > 100 then raise exception 'senha inválida' using errcode = '22023'; end if;
+    update sessions set pw_hash = crypt(p_pw, gen_salt('bf', 8)), pw_fails = 0, updated_at = now() where id = upper(p_id);
+  end if;
+  return true;
+end;
+$$;
+
+-- 5 erros seguidos bloqueiam a senha por 5 minutos; devolve null quando a senha não confere
+create or replace function public.unlock_with_password(p_id text, p_pw text)
+returns text language plpgsql volatile security definer set search_path = public, extensions as $$
+declare
+  r sessions%rowtype;
+  v_key text;
+begin
+  select * into r from sessions where id = upper(p_id) for update;
+  if not found or r.pw_hash is null then return null; end if;
+  if r.pw_fails >= 5 and r.pw_fail_at > now() - interval '5 minutes' then
+    raise exception 'muitas tentativas' using errcode = 'P0429';
+  end if;
+  if crypt(coalesce(p_pw, ''), r.pw_hash) = r.pw_hash then
+    v_key := encode(gen_random_bytes(18), 'hex');
+    update sessions
+       set device_keys = (device_keys || encode(digest(v_key, 'sha256'), 'hex'))[greatest(1, cardinality(device_keys) - 18):],
+           pw_fails = 0
+     where id = r.id;
+    return v_key;
+  end if;
+  update sessions
+     set pw_fails = case when pw_fail_at > now() - interval '5 minutes' then pw_fails + 1 else 1 end,
+         pw_fail_at = now()
+   where id = r.id;
+  return null;
+end;
+$$;
+
 grant execute on function public.create_session(), public.get_session(text), public.check_key(text, text),
   public.server_now(), public.save_state(text, text, jsonb), public.save_log(text, text, text, jsonb),
-  public.add_question(text, text, text), public.delete_question(text, text, text)
+  public.add_question(text, text, text), public.delete_question(text, text, text),
+  public.set_password(text, text, text), public.unlock_with_password(text, text)
   to anon, authenticated;

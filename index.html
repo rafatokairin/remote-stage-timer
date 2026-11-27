@@ -178,6 +178,7 @@ body.stage-mode{background:var(--stage-bg);color:var(--stage-fg)}
 .home{max-width:620px;margin:8vh auto 0;display:flex;flex-direction:column;gap:18px}
 .home h1{font-family:var(--display);font-size:clamp(34px,7vw,52px);line-height:1;margin:0}
 .home .lead{color:var(--muted);font-size:15px;margin:0;max-width:52ch}
+.pw{display:flex;gap:8px;flex-wrap:wrap}.pw input{flex:1 1 160px}
 .home .join{display:flex;gap:8px;flex-wrap:wrap}.home .join input{flex:1 1 160px;text-transform:uppercase;font-family:var(--mono);letter-spacing:.15em}
 .mine a{display:flex;justify-content:space-between;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line);color:inherit;text-decoration:none}
 .mine a span:last-child{font-family:var(--mono);color:var(--muted)}
@@ -278,10 +279,10 @@ emptyLog:"Nada registrado ainda. Cada item entra aqui quando você clica em Pró
 csvHead:"item,quem,previsto,real,diferenca,inicio,fim,pausas",csvFile:"tempos",
 askTitle:"Envie sua pergunta",askLead:"Quem conduz vê na hora e pode mostrar no telão.",askPh:"Sua pergunta",namePh:"Seu nome (opcional)",send:"Enviar pergunta",seeAgenda:"Ver agenda",askNoSession:"Abra pelo QR ou link da sessão.",
 copyLink:"Copiar link",phoneControl:"Controle pelo celular",step1:"Abra a câmera do celular de quem vai rodar os tempos.",step2:"Aponte para o QR e toque no link que aparecer.",
-step3:"Quando o celular conectar, esta tela vai sozinha para o palco.",qrWarn:"Este QR dá controle total da sessão. Não mostre no telão.",openStageHere:"Abrir palco neste aparelho",copyCtl:"Copiar link de controle",
+step3:"Quando o celular conectar, esta tela vai sozinha para o palco.",qrWarn:"Este QR dá controle total da sessão. Não mostre no telão.",openStageHere:"Abrir palco neste aparelho",copyCtl:"Copiar link de controle",pwTitle:"Senha da sessão",pwLead:"Com o código da sessão e esta senha, outro aparelho assume o controle em Conectar celular.",pwSet:"Senha definida.",pwNone:"Sem senha: só o QR de controle dá acesso.",pwPh:"Nova senha (mín. 4)",pwSave:"Salvar senha",pwClear:"Remover senha",pwSaved:"Senha salva.",pwCleared:"Senha removida. Aparelhos que entraram por ela perderam o controle.",pwShort:"A senha precisa de ao menos 4 caracteres.",unlockTitle:"Controlar esta sessão",unlockLead:"Digite a senha que quem criou a sessão definiu.",unlockPh:"Senha",unlockBtn:"Entrar como controle",unlockBad:"Senha errada, ou a sessão não tem senha.",unlockMany:"Muitas tentativas. Espere 5 minutos.",unlockOk:"Pronto, este aparelho controla a sessão.",
 rowQs:"Perguntas do público",rowQsD:"Pode ir para o telão: só envia perguntas.",rowAg:"Agenda",rowAgD:"Só leitura: pauta, o que está no ar e o que vem depois.",rowSt:"Palco em outro aparelho",rowStD:"Só leitura: o timer em tela cheia num segundo notebook ou TV.",
 homeLead:"Timer de palco controlado pelo celular. Crie uma sessão no notebook do palco, escaneie o QR com o celular e controle os tempos de qualquer lugar. Cada item fica registrado com o tempo real.",
-create:"Criar sessão",creating:"Criando…",join:"Entrar numa sessão",codePh:"CÓDIGO",codeAria:"Código da sessão",enter:"Entrar",joinNote:"Com o código você vê agenda e palco e manda perguntas. Para controlar, use o QR de controle.",
+create:"Criar sessão",creating:"Criando…",join:"Entrar numa sessão",codePh:"CÓDIGO",codeAria:"Código da sessão",enter:"Entrar",joinNote:"Com o código você vê agenda e palco e manda perguntas. Para controlar, use o QR de controle ou a senha da sessão em Conectar celular.",
 mine:"Sessões criadas neste aparelho",createFail:"Não consegui criar a sessão. Confira a internet.",
 upNext:"A seguir: ",over:"Estourado",paused:"Pausado",cued:"Na fila",ends:"termina",pick:"Escolha um item na pauta",stopped:"Parado",blackoutOn:"Palco em tela preta. ",msgOn:"Mensagem no palco: ",
 pause:"Pausar",resume:"Continuar",confirmClear:"Clique de novo para apagar tudo",qSent:"Pergunta enviada.",qFail:"Não consegui enviar. Tente de novo.",noFullscreen:"Tela cheia não está disponível aqui.",
@@ -317,10 +318,10 @@ emptyLog:"Nothing logged yet. Each segment is logged when you press Next or Fini
 csvHead:"segment,speaker,planned,actual,difference,start,end,pauses",csvFile:"timings",
 askTitle:"Send your question",askLead:"The host sees it right away and can show it on screen.",askPh:"Your question",namePh:"Your name (optional)",send:"Send question",seeAgenda:"See agenda",askNoSession:"Open it from the session QR or link.",
 copyLink:"Copy link",phoneControl:"Phone control",step1:"Open the camera on the phone of whoever runs the timers.",step2:"Point it at the QR and tap the link that shows up.",
-step3:"When the phone connects, this screen switches to the stage by itself.",qrWarn:"This QR gives full control of the session. Don't show it on the big screen.",openStageHere:"Open stage on this device",copyCtl:"Copy control link",
+step3:"When the phone connects, this screen switches to the stage by itself.",qrWarn:"This QR gives full control of the session. Don't show it on the big screen.",openStageHere:"Open stage on this device",copyCtl:"Copy control link",pwTitle:"Session password",pwLead:"With the session code and this password, another device takes control under Connect phone.",pwSet:"Password set.",pwNone:"No password: only the control QR gives access.",pwPh:"New password (min. 4)",pwSave:"Save password",pwClear:"Remove password",pwSaved:"Password saved.",pwCleared:"Password removed. Devices that joined with it lost control.",pwShort:"The password needs at least 4 characters.",unlockTitle:"Control this session",unlockLead:"Type the password set by whoever created the session.",unlockPh:"Password",unlockBtn:"Join as control",unlockBad:"Wrong password, or the session has no password.",unlockMany:"Too many attempts. Wait 5 minutes.",unlockOk:"Done, this device controls the session.",
 rowQs:"Audience questions",rowQsD:"Safe for the big screen: it only sends questions.",rowAg:"Agenda",rowAgD:"Read-only: rundown, what's on air and what's next.",rowSt:"Stage on another device",rowStD:"Read-only: the fullscreen timer on a second laptop or TV.",
 homeLead:"A stage timer you control from your phone. Create a session on the stage laptop, scan the QR with your phone and run the timers from anywhere. Every segment is logged with its actual time.",
-create:"Create session",creating:"Creating…",join:"Join a session",codePh:"CODE",codeAria:"Session code",enter:"Join",joinNote:"With the code you can see the agenda and stage and send questions. To control, use the control QR.",
+create:"Create session",creating:"Creating…",join:"Join a session",codePh:"CODE",codeAria:"Session code",enter:"Join",joinNote:"With the code you can see the agenda and stage and send questions. To control, use the control QR or the session password under Connect phone.",
 mine:"Sessions created on this device",createFail:"Couldn't create the session. Check your connection.",
 upNext:"Up next: ",over:"Over time",paused:"Paused",cued:"Cued",ends:"ends",pick:"Pick a segment in the rundown",stopped:"Stopped",blackoutOn:"Stage is blacked out. ",msgOn:"Message on stage: ",
 pause:"Pause",resume:"Resume",confirmClear:"Click again to delete everything",qSent:"Question sent.",qFail:"Couldn't send. Try again.",noFullscreen:"Fullscreen isn't available here.",
@@ -345,7 +346,7 @@ function defaultState(){return{
   runStartedAt:0,pausedMs:0,pauseStartedAt:0,shownMsgId:null,flashAt:0,blackout:false,firedOn:{},h24:true}}
 function defaultItem(p){return Object.assign({id:uid(),title:tx("newItem"),speaker:"",notes:"",dur:600,mode:"down",trigger:"manual",at:"",wrapY:60,wrapR:15,chime:true},p||{})}
 
-let S=defaultState(),LOGS={},QS=[];
+let S=defaultState(),LOGS={},QS=[],HAS_PW=false;
 let mode="loading",canWrite=false,peers=0,queued=null,sb=null,chan=null,ctlSeen=false;
 let view=currentView();
 let soundOn=false,audioCtx=null,lastPhase=null,lastRunKey="",handledAuto=new Set();
@@ -653,7 +654,13 @@ function connectHTML(){
       <h2 style="margin:0">${tx("session")} <span class="code">${SID}</span></h2>${canWrite?"":`<a class="btn sm" href="#${slug("palco")}">${tx("openStage")}</a>`}</div>
     ${row(tx("rowQs"),"perguntas",tx("rowQsD"))}
     ${row(tx("rowAg"),"agenda",tx("rowAgD"))}
-    ${canWrite?row(tx("rowSt"),"palco",tx("rowStD")):""}</section></div>`}
+    ${canWrite?row(tx("rowSt"),"palco",tx("rowStD")):""}</section>${pwHTML()}</div>`}
+function pwHTML(){
+  if(canWrite)return `<section class="card"><h2>${tx("pwTitle")}</h2><p class="note" style="margin:0 0 10px">${tx("pwLead")}</p>
+    <form class="pw" id="pwForm"><input class="f" id="pwNew" type="password" autocomplete="new-password" minlength="4" maxlength="100" placeholder="${tx("pwPh")}" aria-label="${tx("pwPh")}"><button class="btn" type="submit">${tx("pwSave")}</button>${HAS_PW?`<button class="btn" type="button" id="pwClear">${tx("pwClear")}</button>`:""}</form>
+    <p class="note">${HAS_PW?tx("pwSet"):tx("pwNone")}</p></section>`;
+  return `<section class="card"><h2>${tx("unlockTitle")}</h2><p class="note" style="margin:0 0 10px">${tx("unlockLead")}</p>
+    <form class="pw" id="unlockForm"><input class="f" id="unlockPw" type="password" autocomplete="current-password" maxlength="100" placeholder="${tx("unlockPh")}" aria-label="${tx("unlockPh")}"><button class="btn primary" type="submit">${tx("unlockBtn")}</button></form></section>`}
 
 function homeHTML(){
   const mine=Object.entries(lsGet("ah-sessions",{})).sort((a,b)=>b[1].at-a[1].at).slice(0,8);
@@ -733,6 +740,14 @@ function bind(){
       updItem(id,{[f]:v})}
     else if(el.dataset.m){updMsg(el.closest("[data-mid]").dataset.mid,{text:el.value})}};
   app.addEventListener("focusout",()=>setTimeout(()=>{if(pendingRender&&!isEditing())renderAll()},0));
+  const pf=$("#pwForm");if(pf){pf.onsubmit=async e=>{e.preventDefault();const pw=$("#pwNew").value;if(pw.length<4){toast(tx("pwShort"));return}
+      try{await rpc("set_password",{p_id:SID,p_key:KEY,p_pw:pw});HAS_PW=true;toast(tx("pwSaved"));renderAll()}catch(err){toast(tx("saveFail"))}};
+    const pc=$("#pwClear");if(pc)pc.onclick=async()=>{try{await rpc("set_password",{p_id:SID,p_key:KEY,p_pw:""});HAS_PW=false;toast(tx("pwCleared"));renderAll()}catch(err){toast(tx("saveFail"))}}}
+  const uf=$("#unlockForm");if(uf)uf.onsubmit=async e=>{e.preventDefault();const b=uf.querySelector("button");b.disabled=true;
+    try{const k=await rpc("unlock_with_password",{p_id:SID,p_pw:$("#unlockPw").value});
+      if(!k){toast(tx("unlockBad"));b.disabled=false;return}
+      KEY=k;lsSet("ah-key-"+SID,k);canWrite=true;toast(tx("unlockOk"));location.hash=slug("controle");renderAll()}
+    catch(err){toast(err.code==="P0429"?tx("unlockMany"):tx("saveFail"));b.disabled=false}};
   const f=$("#askForm");if(f)f.addEventListener("submit",async e=>{e.preventDefault();const text=$("#askText").value.trim();if(!text)return;
     try{await rpc("add_question",{p_id:SID,p_text:text,p_name:$("#askName").value.trim()});ping();$("#askText").value="";toast(tx("qSent"))}
     catch(err){toast(tx("qFail"))}})}
@@ -771,7 +786,7 @@ function loadSample(){
 function apply(m){
   if(!m){mode="missing";renderAll();return}
   S=m.state&&Object.keys(m.state).length?Object.assign(defaultState(),m.state):defaultState();
-  LOGS=m.logs||{};QS=(m.questions||[]).slice().sort((a,b)=>b.at-a.at);mode="net";
+  HAS_PW=!!m.has_pw;LOGS=m.logs||{};QS=(m.questions||[]).slice().sort((a,b)=>b.at-a.at);mode="net";
   if(canWrite)rememberSession();renderAll()}
 async function refresh(){try{const m=await rpc("get_session",{p_id:SID});if(outstanding&&m){queued=m;return}apply(m)}catch(e){if(mode!=="off"){mode="off";renderAll()}}}
 let refreshT=null;function scheduleRefresh(){clearTimeout(refreshT);refreshT=setTimeout(refresh,60)}
